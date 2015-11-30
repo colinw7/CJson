@@ -12,10 +12,19 @@ main(int argc, char **argv)
 
       if      (arg == "debug")
         CJson::setDebug(true);
+      else if (arg == "quiet")
+        CJson::setQuiet(true);
       else if (arg == "flat")
         CJson::setPrintFlat(true);
+      else if (arg == "to_real")
+        CJson::setStringToReal(true);
       else if (arg == "match")
         match = argv[++i];
+      else if (arg == "h" || arg == "help") {
+        std::cerr << "CJsonTest [-debug] [-quiet] [-flat] [-match <pattern>] <filename>" <<
+                     std::endl;
+        exit(0);
+      }
       else
         std::cerr << "Unhandled option: " << arg << std::endl;
     }
@@ -37,10 +46,19 @@ main(int argc, char **argv)
     if (! CJson::matchValues(value, 0, match, values))
       exit(1);
 
-    for (const auto &v : values) {
-      v->print(std::cout);
+    if (CJson::isStringToReal()) {
+      for (const auto &v : values) {
+        v->printReal(std::cout);
 
-      std::cout << std::endl;
+        std::cout << std::endl;
+      }
+    }
+    else {
+      for (const auto &v : values) {
+        v->print(std::cout);
+
+        std::cout << std::endl;
+      }
     }
   }
   else {

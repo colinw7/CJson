@@ -57,7 +57,11 @@ namespace CJson {
       return t;
     }
 
+    virtual const char *typeName() const { return "value"; }
+
     virtual void print(std::ostream &os=std::cout) const = 0;
+
+    virtual void printReal(std::ostream &os=std::cout) const { print(os); }
 
     friend std::ostream &operator<<(std::ostream &os, const Value &v) {
       v.print(os);
@@ -80,6 +84,12 @@ namespace CJson {
 
     const std::string &value() const { return str_; }
 
+    bool toReal(double &r) const;
+
+    const char *typeName() const override { return "string"; }
+
+    void printReal(std::ostream &os=std::cout) const override;
+
     void print(std::ostream &os=std::cout) const override;
 
   private:
@@ -96,6 +106,8 @@ namespace CJson {
     }
 
     double value() const { return value_; }
+
+    const char *typeName() const override { return "number"; }
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -114,6 +126,8 @@ namespace CJson {
 
     bool value() const { return true; }
 
+    const char *typeName() const override { return "true"; }
+
     void print(std::ostream &os=std::cout) const override;
   };
 
@@ -128,6 +142,8 @@ namespace CJson {
 
     bool value() const { return false; }
 
+    const char *typeName() const override { return "false"; }
+
     void print(std::ostream &os=std::cout) const override;
   };
 
@@ -141,6 +157,8 @@ namespace CJson {
     }
 
     void *value() const { return nullptr; }
+
+    const char *typeName() const override { return "null"; }
 
     void print(std::ostream &os=std::cout) const override;
   };
@@ -204,6 +222,11 @@ namespace CJson {
         names.push_back(nv.first);
     }
 
+    void getValues(std::vector<Value *> &names) {
+      for (const auto &nv : nameValueArray_)
+        names.push_back(nv.second);
+    }
+
     bool getNamedValue(const std::string &name, Value *&value) const {
       NameValueMap::const_iterator p = nameValueMap_.find(name);
 
@@ -229,6 +252,10 @@ namespace CJson {
 
       return true;
     }
+
+    const char *typeName() const override { return "object"; }
+
+    void printReal(std::ostream &os=std::cout) const override;
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -271,6 +298,10 @@ namespace CJson {
       return t;
     }
 
+    const char *typeName() const override { return "array"; }
+
+    void printReal(std::ostream &os=std::cout) const override;
+
     void print(std::ostream &os=std::cout) const override;
 
    private:
@@ -284,15 +315,25 @@ namespace CJson {
 
   //---
 
+  void setQuiet(bool b);
+  bool isQuiet();
+
+  //---
+
   void setPrintFlat(bool b);
   bool isPrintFlat();
 
   //---
 
+  void setStringToReal(bool b);
+  bool isStringToReal();
+
+  //---
+
   void skipSpace(const std::string &str, int &i);
 
-  double stod(const std::string &str);
-  long   stol(const std::string &str);
+  double stod(const std::string &str, bool &ok);
+  long   stol(const std::string &str, bool &ok);
 
   // read string at file pos
   bool readString(const std::string &str, int &i, std::string &str1);
@@ -404,6 +445,15 @@ namespace CJson {
 
   //------
 
+  /* match values:
+   *  fields are separated by slash '/'
+   *  values can be grouped using braces {<match>,<match>,...}
+   *  arrays are added using square brackets with optional index range [<start>:<end>]
+   *  list of object keys can be returned using ?
+   *  array index can be added using #
+   *
+   *  e.g. "head/[1:3]/{name1,name2}/?
+   */
   bool matchValues(Value *value, int i, const std::string &match, Array::Values &values);
 
   bool matchObject(Value *value, const std::string &match, Value* &value1);

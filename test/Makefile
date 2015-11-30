@@ -27,8 +27,8 @@ LFLAGS = \
 -L../../CJson/lib \
 
 clean:
-	$(RM) -f $(OBJ_DIR)/*.o
-	$(RM) -f $(BIN_DIR)/CJsonTest
+	$(RM) -f *.o
+	$(RM) -f CJsonTest
 
 .SUFFIXES: .cpp
 

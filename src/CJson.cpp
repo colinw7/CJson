@@ -2,14 +2,22 @@
 
 namespace CJson {
 
-static bool debug     = false;
-static bool printFlat = false;
+static bool debug        = false;
+static bool quiet        = false;
+static bool printFlat    = false;
+static bool stringToReal = false;
 
 void setDebug(bool b) { debug = b; }
 bool isDebug() { return debug; }
 
+void setQuiet(bool b) { quiet = b; }
+bool isQuiet() { return quiet; }
+
 void setPrintFlat(bool b) { printFlat = b; }
 bool isPrintFlat() { return printFlat; }
+
+void setStringToReal(bool b) { stringToReal = b; }
+bool isStringToReal() { return stringToReal; }
 
 }
 
@@ -27,20 +35,34 @@ skipSpace(const std::string &str, int &i)
 
 double
 CJson::
-stod(const std::string &str)
+stod(const std::string &str, bool &ok)
 {
   char *p;
 
-  return strtod(str.c_str(), &p);
+  double r = strtod(str.c_str(), &p);
+
+  while (*p && isspace(*p))
+    ++p;
+
+  ok = (*p == '\0');
+
+  return r;
 }
 
 long
 CJson::
-stol(const std::string &str)
+stol(const std::string &str, bool &ok)
 {
   char *p;
 
-  return strtol(str.c_str(), &p, 10);
+  int i = strtol(str.c_str(), &p, 10);
+
+  while (*p && isspace(*p))
+    ++p;
+
+  ok = (*p == '\0');
+
+  return i;
 }
 
 // read string at file pos
@@ -262,7 +284,9 @@ readValue(const std::string &str, int &i, Value *&value)
     if (! readNumber(str, i, str1))
       return false;
 
-    double n = CJson::stod(str1);
+    bool ok;
+
+    double n = CJson::stod(str1, ok);
 
     value = new Number(n);
   }
@@ -384,13 +408,14 @@ matchObject(Value *value, const std::string &match, Value* &value1)
     std::cerr << "matchObject \'" << match << "\'" << std::endl;
 
   if (! value->isObject()) {
-    std::cerr << "not an object" << std::endl;
+    if (! isQuiet())
+      std::cerr << value->typeName() << " is not an object" << std::endl;
     return false;
   }
 
   Object *obj = value->cast<Object>();
 
-  if (match == "?") {
+  if (match == "?" || match == "?keys") {
     std::vector<std::string> names;
 
     obj->getNames(names);
@@ -405,9 +430,27 @@ matchObject(Value *value, const std::string &match, Value* &value1)
 
     value1 = array;
   }
+  else if (match == "?type") {
+    String *str = new String(obj->typeName());
+
+    value1 = str;
+  }
+  else if (match == "?values") {
+    std::vector<Value *> values;
+
+    obj->getValues(values);
+
+    Array *array = new Array;
+
+    for (const auto &v : values)
+      array->addValue(v);
+
+   value1 = array;
+  }
   else {
     if (! obj->getNamedValue(match, value1)) {
-      std::cerr << "no value \'" << match << "\'" << std::endl;
+      if (! isQuiet())
+        std::cerr << "no value \'" << match << "\'" << std::endl;
       return false;
     }
   }
@@ -422,36 +465,77 @@ matchArray(Value *value, const std::string &lhs, const std::string &rhs, Array::
   if (isDebug())
     std::cerr << "matchArray \'" << lhs << "\' \'" << rhs << "\'" << std::endl;
 
-  if (lhs[0] != '[' || lhs[lhs.size() - 1] != ']')
-    return false;
-
   if (! value->isArray()) {
-    std::cerr << "not an array" << std::endl;
+    if (! isQuiet())
+      std::cerr << value->typeName() << " is not an array" << std::endl;
     return false;
   }
 
   Array *array = value->cast<Array>();
 
+  if (lhs[0] != '[' || lhs[lhs.size() - 1] != ']')
+    return false;
+
   std::string range = lhs.substr(1, lhs.size() - 2);
+
+  if (range == "?size") {
+    Number *n = new Number(array->size());
+
+    values.push_back(n);
+
+    return true;
+  }
 
   auto p = range.find(',');
 
   if (p != std::string::npos) {
-    std::string match1 = lhs;
+    std::string match1 = range;
 
-    std::string lhs = match1.substr(0, p);
-    std::string rhs = match1.substr(p + 1);
+    std::string lhs1 = match1.substr(0, p);
+    std::string rhs1 = match1.substr(p + 1);
 
-    int i1 = CJson::stol(lhs);
-    int i2 = CJson::stol(rhs);
+    bool ok1, ok2;
+
+    int i1 = CJson::stol(lhs1, ok1);
+    int i2 = CJson::stol(rhs1, ok2);
+
+    if (! ok1 || ! ok2) {
+      if (! isQuiet())
+        std::cerr << "Invalid array indices '" << lhs1 << "', '" << rhs1 << "'" << std::endl;
+      return false;
+    }
 
     for (int i = i1; i <= i2 && i < int(array->size()); ++i) {
       Value *value1 = array->at(i);
 
-      if (rhs != "")
-        matchValues(value1, i, rhs, values);
+      if (rhs1 != "")
+        matchValues(value1, i, rhs1, values);
       else
         values.push_back(value1);
+    }
+  }
+  else if (range != "") {
+    bool ok;
+
+    int i1 = CJson::stol(range, ok);
+
+    if (! ok) {
+      if (! isQuiet())
+        std::cerr << "Invalid array index '" << lhs << "'" << std::endl;
+      return false;
+    }
+
+    int i = 0;
+
+    for (const auto &v : array->values()) {
+      if (i == i1) {
+        if (rhs != "")
+          matchValues(v, i, rhs, values);
+        else
+          values.push_back(v);
+      }
+
+      ++i;
     }
   }
   else {
@@ -566,8 +650,11 @@ matchValues(Value *value, int ind, const std::string &match, Array::Values &valu
   else if (match1[0] == '#') {
     int base = 0;
 
-    if (match1.size() > 1)
-      base = CJson::stol(match1.substr(1));
+    if (match1.size() > 1) {
+      bool ok;
+
+      base = CJson::stol(match1.substr(1), ok);
+    }
 
     Number *n = new Number(base + ind);
 
@@ -590,12 +677,37 @@ matchValues(Value *value, int ind, const std::string &match, Array::Values &valu
 
 //------
 
+bool
+CJson::String::
+toReal(double &r) const
+{
+  bool ok;
+
+  r = CJson::stod(str_, ok);
+
+  return ok;
+}
+
+void
+CJson::String::
+printReal(std::ostream &os) const
+{
+  double r;
+
+  if (toReal(r))
+    os << r;
+  else
+    print(os);
+}
+
 void
 CJson::String::
 print(std::ostream &os) const
 {
   os << "\"" << str_ << "\"";
 }
+
+//------
 
 void
 CJson::Number::
@@ -604,12 +716,16 @@ print(std::ostream &os) const
   os << value_;
 }
 
+//------
+
 void
 CJson::True::
 print(std::ostream &os) const
 {
   os << "\"true\"";
 }
+
+//------
 
 void
 CJson::False::
@@ -618,11 +734,43 @@ print(std::ostream &os) const
   os << "\"false\"";
 }
 
+//------
+
 void
 CJson::Null::
 print(std::ostream &os) const
 {
   os << "\"null\"";
+}
+
+//------
+
+void
+CJson::Object::
+printReal(std::ostream &os) const
+{
+  bool first = true;
+
+  if (! isPrintFlat())
+    os << "{";
+
+  for (const auto &nv : nameValueArray_) {
+    if (! isPrintFlat()) {
+      if (! first) os << ",";
+    }
+    else {
+      if (! first) os << " ";
+    }
+
+    os << "\"" << nv.first << "\":";
+
+    nv.second->printReal(os);
+
+    first = false;
+  }
+
+  if (! isPrintFlat())
+    os << "}";
 }
 
 void
@@ -652,6 +800,35 @@ print(std::ostream &os) const
   if (! isPrintFlat())
     os << "}";
 }
+
+//------
+
+void
+CJson::Array::
+printReal(std::ostream &os) const
+{
+  bool first = true;
+
+  if (! isPrintFlat())
+    os << "[";
+
+  for (const auto &v : values_) {
+    if (! isPrintFlat()) {
+      if (! first) os << ",";
+    }
+    else {
+      if (! first) os << " ";
+    }
+
+    v->printReal(os);
+
+    first = false;
+  }
+
+  if (! isPrintFlat())
+    os << "]";
+}
+//------
 
 void
 CJson::Array::
