@@ -3,7 +3,6 @@ AR = ar
 RM = rm
 
 CDEBUG = -g
-LDEBUG = -g
 
 INC_DIR = ../include
 OBJ_DIR = ../obj
@@ -28,7 +27,7 @@ clean:
 	$(RM) -f $(LIB_DIR)/libCJson.a
 
 $(OBJS): $(OBJ_DIR)/%.o: %.cpp
-	$(CC) -c $< -o $(OBJ_DIR)/$*.o $(CPPFLAGS)
+	$(CC) $(CDEBUG) -c $< -o $(OBJ_DIR)/$*.o $(CPPFLAGS)
 
 .SUFFIXES: .cpp
 
