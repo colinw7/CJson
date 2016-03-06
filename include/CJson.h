@@ -63,6 +63,8 @@ namespace CJson {
 
     virtual void printReal(std::ostream &os=std::cout) const { print(os); }
 
+    virtual void printShort(std::ostream &os=std::cout) const { print(os); }
+
     friend std::ostream &operator<<(std::ostream &os, const Value &v) {
       v.print(os);
 
@@ -89,6 +91,8 @@ namespace CJson {
     const char *typeName() const override { return "string"; }
 
     void printReal(std::ostream &os=std::cout) const override;
+
+    void printShort(std::ostream &os=std::cout) const override;
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -440,6 +444,8 @@ namespace CJson {
 
         break;
       }
+      default:
+        break;
     }
   }
 
@@ -454,6 +460,8 @@ namespace CJson {
    *
    *  e.g. "head/[1:3]/{name1,name2}/?
    */
+  bool matchValues(Value *value, const std::string &match, Array::Values &values);
+
   bool matchValues(Value *value, int i, const std::string &match, Array::Values &values);
 
   bool matchObject(Value *value, const std::string &match, Value* &value1);
@@ -462,6 +470,24 @@ namespace CJson {
                   Array::Values &values);
   bool matchList(Value *value, int ind, const std::string &lhs, const std::string &rhs,
                   Array::Values &values);
+
+  bool matchHier(Value *value, int ind, const std::string &lhs, const std::string &rhs,
+                 Array::Values &values);
+  bool matchHier1(Value *value, int ind, const std::string &lhs, const std::string &rhs,
+                  const std::vector<std::string> &keys, Array::Values &ivalues,
+                  Array::Values &values);
+
+  String *hierValuesToKey(const Array::Values &values, const Array::Values &kvalues);
+
+  //------
+
+  String* createString(const std::string &str);
+  Number* createNumber(double r);
+  True*   createTrue();
+  False*  createFalse();
+  Null*   createNull();
+  Object* createObject();
+  Array*  createArray();
 }
 
 #endif

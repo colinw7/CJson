@@ -5,6 +5,7 @@ main(int argc, char **argv)
 {
   std::string filename;
   std::string match;
+  bool        shortFlag = false;
 
   for (auto i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
@@ -20,6 +21,8 @@ main(int argc, char **argv)
         CJson::setStringToReal(true);
       else if (arg == "match")
         match = argv[++i];
+      else if (arg == "short")
+        shortFlag = true;
       else if (arg == "h" || arg == "help") {
         std::cerr << "CJsonTest [-debug] [-quiet] [-flat] [-match <pattern>] <filename>" <<
                      std::endl;
@@ -43,7 +46,7 @@ main(int argc, char **argv)
   if (match != "") {
     CJson::Array::Values values;
 
-    if (! CJson::matchValues(value, 0, match, values))
+    if (! CJson::matchValues(value, match, values))
       exit(1);
 
     if (CJson::isStringToReal()) {
@@ -55,7 +58,10 @@ main(int argc, char **argv)
     }
     else {
       for (const auto &v : values) {
-        v->print(std::cout);
+        if (shortFlag)
+          v->printShort(std::cout);
+        else
+          v->print(std::cout);
 
         std::cout << std::endl;
       }
@@ -70,7 +76,7 @@ main(int argc, char **argv)
     PackageNameValueArray packageNameValues;
 
     CJson::processNodes(value, [&package, &packageNameValues]
-     (const COptString &name, const CJson::Value *v, int depth) {
+     (const COptString & /*name*/, const CJson::Value *v, int /*depth*/) {
       if (v->isObject()) {
         const CJson::Object *obj = v->cast<CJson::Object>();
 

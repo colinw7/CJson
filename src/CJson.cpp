@@ -160,7 +160,7 @@ readObject(const std::string &str, int &i, Object *&obj)
   if (i >= len || str[i] != '{')
     return false;
 
-  obj = new Object;
+  obj = createObject();
 
   ++i;
 
@@ -222,7 +222,7 @@ readArray(const std::string &str, int &i, Array *&array)
   if (i >= len || str[i] != '[')
     return false;
 
-  array = new Array;
+  array = createArray();
 
   ++i;
 
@@ -276,7 +276,7 @@ readValue(const std::string &str, int &i, Value *&value)
     if (! readString(str, i, str1))
       return false;
 
-    value = new String(str1);
+    value = createString(str1);
   }
   else if (c == '-' || isdigit(c)) {
     std::string str1;
@@ -288,7 +288,7 @@ readValue(const std::string &str, int &i, Value *&value)
 
     double n = CJson::stod(str1, ok);
 
-    value = new Number(n);
+    value = createNumber(n);
   }
   else if (c == '{') {
     Object *obj;
@@ -308,20 +308,20 @@ readValue(const std::string &str, int &i, Value *&value)
   }
   else if (i < len - 3 &&
            str[i] == 't' && str[i + 1] == 'r' && str[i + 2] == 'u' && str[i + 3] == 'e') {
-    value = new True;
+    value = createTrue();
 
     i += 4;
   }
   else if (i < len - 4 &&
            str[i + 0] == 'f' && str[i + 1] == 'a' && str[i + 2] == 'l' &&
            str[i + 3] == 's' && str[i + 4] == 'e') {
-    value = new False;
+    value = createFalse();
 
     i += 5;
   }
   else if (i < len - 3 &&
            str[i] == 'n' && str[i + 1] == 'u' && str[i + 2] == 'l' && str[i + 3] == 'l') {
-    value = new Null;
+    value = createNull();
 
     i += 4;
   }
@@ -420,10 +420,10 @@ matchObject(Value *value, const std::string &match, Value* &value1)
 
     obj->getNames(names);
 
-    Array *array = new Array;
+    Array *array = createArray();
 
     for (const auto &n : names) {
-      String *str = new String(n);
+      String *str = createString(n);
 
       array->addValue(str);
     }
@@ -431,7 +431,7 @@ matchObject(Value *value, const std::string &match, Value* &value1)
     value1 = array;
   }
   else if (match == "?type") {
-    String *str = new String(obj->typeName());
+    String *str = createString(obj->typeName());
 
     value1 = str;
   }
@@ -440,7 +440,7 @@ matchObject(Value *value, const std::string &match, Value* &value1)
 
     obj->getValues(values);
 
-    Array *array = new Array;
+    Array *array = createArray();
 
     for (const auto &v : values)
       array->addValue(v);
@@ -479,7 +479,7 @@ matchArray(Value *value, const std::string &lhs, const std::string &rhs, Array::
   std::string range = lhs.substr(1, lhs.size() - 2);
 
   if (range == "?size") {
-    Number *n = new Number(array->size());
+    Number *n = createNumber(array->size());
 
     values.push_back(n);
 
@@ -583,7 +583,7 @@ matchList(Value *value, int ind, const std::string &lhs,
 
   fields.push_back(names);
 
-  Array *array = new Array;
+  Array *array = createArray();
 
   for (const auto &f : fields) {
     Array::Values values1;
@@ -603,9 +603,25 @@ matchList(Value *value, int ind, const std::string &lhs,
 
 bool
 CJson::
+matchValues(Value *value, const std::string &match, Array::Values &values)
+{
+  return matchValues(value, 0, match, values);
+}
+
+bool
+CJson::
 matchValues(Value *value, int ind, const std::string &match, Array::Values &values)
 {
   std::string match1 = match;
+
+  auto p = match.find("...");
+
+  if (p != std::string::npos) {
+    std::string lhs = match1.substr(0, p);
+    std::string rhs = match1.substr(p + 3);
+
+    return matchHier(value, ind, lhs, rhs, values);
+  }
 
   if (match1 != "" && match1[0] != '{') {
     auto p = match1.find("/");
@@ -656,7 +672,7 @@ matchValues(Value *value, int ind, const std::string &match, Array::Values &valu
       base = CJson::stol(match1.substr(1), ok);
     }
 
-    Number *n = new Number(base + ind);
+    Number *n = createNumber(base + ind);
 
     values.push_back(n);
   }
@@ -673,6 +689,197 @@ matchValues(Value *value, int ind, const std::string &match, Array::Values &valu
   }
 
   return true;
+}
+
+bool
+CJson::
+matchHier(Value *value, int ind, const std::string &name, const std::string &hname,
+          Array::Values &values)
+{
+  typedef std::vector<std::string> Keys;
+
+  Keys keys;
+
+  std::string hname1 = hname;
+
+  auto p = hname1.find("...");
+
+  if (p != std::string::npos) {
+    std::string lhs1 = hname1.substr(0, p);
+    std::string rhs1 = hname1.substr(p + 3);
+
+    hname1 = lhs1;
+
+    auto p1 = rhs1.find(",");
+
+    while (p1 != std::string::npos) {
+      std::string lhs2 = rhs1.substr(0, p1);
+      std::string rhs2 = rhs1.substr(p1 + 1);
+
+      keys.push_back(lhs2);
+
+      rhs1 = rhs2;
+
+      p1 = rhs1.find(",");
+    }
+
+    keys.push_back(rhs1);
+  }
+
+  Array::Values ivalues;
+
+  return matchHier1(value, ind, name, hname1, keys, ivalues, values);
+}
+
+bool
+CJson::
+matchHier1(Value *value, int /*ind*/, const std::string &lhs, const std::string &rhs,
+           const std::vector<std::string> &keys, Array::Values &ivalues, Array::Values &values)
+{
+  if (! value->isObject()) {
+    if (! isQuiet())
+      std::cerr << value->typeName() << " is not an object" << std::endl;
+    return false;
+  }
+
+  Object *obj = value->cast<Object>();
+
+  // name
+  Value *lvalue = 0;
+
+  if (obj->getNamedValue(lhs, lvalue))
+    ivalues.push_back(lvalue);
+
+  // hier object
+  Value *rvalue = 0;
+
+  if (obj->getNamedValue(rhs, rvalue)) {
+    if (! rvalue->isArray()) {
+      if (! isQuiet())
+        std::cerr << rvalue->typeName() << " is not an object" << std::endl;
+      return false;
+    }
+
+    Array *array = rvalue->cast<Array>();
+
+    int i = 0;
+
+    for (auto &v : array->values()) {
+      Array::Values ivalues1 = ivalues;
+
+      matchHier1(v, i, lhs, rhs, keys, ivalues1, values);
+
+      ++i;
+    }
+  }
+  else {
+    Array::Values kvalues;
+
+    for (const auto &k : keys) {
+      Value *kvalue;
+
+      if (obj->getNamedValue(k, kvalue))
+        kvalues.push_back(kvalue);
+    }
+
+    String *str = hierValuesToKey(ivalues, kvalues);
+
+    values.push_back(str);
+  }
+
+  return true;
+}
+
+CJson::String *
+CJson::
+hierValuesToKey(const Array::Values &values, const Array::Values &kvalues)
+{
+  std::string str;
+
+  std::string vstr;
+
+  for (const auto &v : values) {
+    if (vstr != "")
+      vstr += "/";
+
+    if      (v->isString())
+      vstr += v->cast<String>()->value();
+    else if (v->isNumber())
+      vstr += std::to_string(v->cast<Number>()->value());
+    else
+      vstr += "??";
+  }
+
+  if (! kvalues.empty()) {
+    std::string kstr;
+
+    for (const auto &k : kvalues) {
+      if (kstr != "")
+        kstr += ",";
+
+      if      (k->isString())
+        kstr += k->cast<String>()->value();
+      else if (k->isNumber())
+        kstr += std::to_string(k->cast<Number>()->value());
+      else
+        kstr += "??";
+    }
+
+    str = "\"" + vstr + "\"\t" + kstr;
+  }
+  else
+    str = "\"" + vstr + "\"";
+
+  return createString(str);
+}
+
+CJson::String *
+CJson::
+createString(const std::string &str)
+{
+  return new String(str);
+}
+
+CJson::Number *
+CJson::
+createNumber(double r)
+{
+  return new Number(r);
+}
+
+CJson::True *
+CJson::
+createTrue()
+{
+  return new True;
+}
+
+CJson::False *
+CJson::
+createFalse()
+{
+  return new False;
+}
+
+CJson::Null *
+CJson::
+createNull()
+{
+  return new Null;
+}
+
+CJson::Object *
+CJson::
+createObject()
+{
+  return new Object;
+}
+
+CJson::Array *
+CJson::
+createArray()
+{
+  return new Array;
 }
 
 //------
@@ -698,6 +905,13 @@ printReal(std::ostream &os) const
     os << r;
   else
     print(os);
+}
+
+void
+CJson::String::
+printShort(std::ostream &os) const
+{
+  os << str_;
 }
 
 void
