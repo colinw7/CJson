@@ -9,15 +9,21 @@
 
 #include <COptVal.h>
 
-namespace CJson {
-  enum ValueType {
+class CStrParse;
+
+//------
+
+class CJson {
+ public:
+  enum class ValueType {
+    VALUE_NONE,
     VALUE_STRING,
     VALUE_NUMBER,
     VALUE_TRUE,
     VALUE_FALSE,
     VALUE_NULL,
     VALUE_OBJECT,
-    VALUE_ARRAY,
+    VALUE_ARRAY
   };
 
   //---
@@ -25,19 +31,19 @@ namespace CJson {
   // Json Value base class
   class Value {
    public:
-    Value(ValueType type) : type_(type) { }
+    Value(CJson *json, ValueType type) : json_(json), type_(type) { }
 
     virtual ~Value() { }
 
     ValueType type() const { return type_; }
 
-    bool isString() const { return type_ == VALUE_STRING; }
-    bool isNumber() const { return type_ == VALUE_NUMBER; }
-    bool isTrue  () const { return type_ == VALUE_TRUE  ; }
-    bool isFalse () const { return type_ == VALUE_FALSE ; }
-    bool isNull  () const { return type_ == VALUE_NULL  ; }
-    bool isObject() const { return type_ == VALUE_OBJECT; }
-    bool isArray () const { return type_ == VALUE_ARRAY ; }
+    bool isString() const { return type_ == ValueType::VALUE_STRING; }
+    bool isNumber() const { return type_ == ValueType::VALUE_NUMBER; }
+    bool isTrue  () const { return type_ == ValueType::VALUE_TRUE  ; }
+    bool isFalse () const { return type_ == ValueType::VALUE_FALSE ; }
+    bool isNull  () const { return type_ == ValueType::VALUE_NULL  ; }
+    bool isObject() const { return type_ == ValueType::VALUE_OBJECT; }
+    bool isArray () const { return type_ == ValueType::VALUE_ARRAY ; }
 
     bool isComposite() const { return isObject() || isArray(); }
 
@@ -72,7 +78,8 @@ namespace CJson {
     }
 
    protected:
-    ValueType type_;
+    CJson*    json_ { 0 };
+    ValueType type_ { ValueType::VALUE_NONE };
   };
 
   //---
@@ -80,8 +87,8 @@ namespace CJson {
   // Json String
   class String : public Value {
    public:
-    String(const std::string &str) :
-     Value(VALUE_STRING), str_(str) {
+    String(CJson *json, const std::string &str) :
+     Value(json, ValueType::VALUE_STRING), str_(str) {
     }
 
     const std::string &value() const { return str_; }
@@ -96,7 +103,7 @@ namespace CJson {
 
     void print(std::ostream &os=std::cout) const override;
 
-  private:
+   private:
     std::string str_;
   };
 
@@ -105,8 +112,8 @@ namespace CJson {
   // Json Number
   class Number : public Value {
    public:
-    Number(double value) :
-     Value(VALUE_NUMBER), value_(value) {
+    Number(CJson *json, double value=0.0) :
+     Value(json, ValueType::VALUE_NUMBER), value_(value) {
     }
 
     double value() const { return value_; }
@@ -115,8 +122,8 @@ namespace CJson {
 
     void print(std::ostream &os=std::cout) const override;
 
-  private:
-    double value_;
+   private:
+    double value_ { 0.0 };
   };
 
   //---
@@ -124,8 +131,8 @@ namespace CJson {
   // Json True
   class True : public Value {
    public:
-    True() :
-     Value(VALUE_TRUE) {
+    True(CJson *json) :
+     Value(json, ValueType::VALUE_TRUE) {
     }
 
     bool value() const { return true; }
@@ -140,8 +147,8 @@ namespace CJson {
   // Json False
   class False : public Value {
    public:
-    False() :
-     Value(VALUE_FALSE) {
+    False(CJson *json) :
+     Value(json, ValueType::VALUE_FALSE) {
     }
 
     bool value() const { return false; }
@@ -156,8 +163,8 @@ namespace CJson {
   // Json Null
   class Null : public Value {
    public:
-    Null() :
-     Value(VALUE_NULL) {
+    Null(CJson *json) :
+     Value(json, ValueType::VALUE_NULL) {
     }
 
     void *value() const { return nullptr; }
@@ -165,23 +172,6 @@ namespace CJson {
     const char *typeName() const override { return "null"; }
 
     void print(std::ostream &os=std::cout) const override;
-  };
-
-  //---
-
-  template<typename T>
-  struct TypeMap {
-    typedef CJson::Null Type;
-  };
-
-  template<>
-  struct TypeMap<std::string> {
-    typedef CJson::String Type;
-  };
-
-  template<>
-  struct TypeMap<double> {
-    typedef CJson::Number Type;
   };
 
   //---
@@ -194,8 +184,8 @@ namespace CJson {
     typedef std::vector<NameValue>         NameValueArray;
 
    public:
-    Object() :
-     Value(VALUE_OBJECT) {
+    Object(CJson *json) :
+     Value(json, ValueType::VALUE_OBJECT) {
     }
 
    ~Object() {
@@ -226,9 +216,9 @@ namespace CJson {
         names.push_back(nv.first);
     }
 
-    void getValues(std::vector<Value *> &names) {
+    void getValues(std::vector<Value *> &values) {
       for (const auto &nv : nameValueArray_)
-        names.push_back(nv.second);
+        values.push_back(nv.second);
     }
 
     bool getNamedValue(const std::string &name, Value *&value) const {
@@ -276,8 +266,8 @@ namespace CJson {
     typedef std::vector<Value *> Values;
 
    public:
-    Array() :
-     Value(VALUE_ARRAY) {
+    Array(CJson *json) :
+     Value(json, ValueType::VALUE_ARRAY) {
     }
 
    ~Array() {
@@ -312,49 +302,36 @@ namespace CJson {
     Values values_;
   };
 
-  //---
+  //------
 
-  void setDebug(bool b);
-  bool isDebug();
-
-  //---
-
-  void setQuiet(bool b);
-  bool isQuiet();
+  CJson();
 
   //---
 
-  void setPrintFlat(bool b);
-  bool isPrintFlat();
+  void setStrict(bool b) { strict_ = b; }
+  bool isStrict() { return strict_; }
 
   //---
 
-  void setStringToReal(bool b);
-  bool isStringToReal();
+  void setDebug(bool b) { debug_ = b; }
+  bool isDebug() { return debug_; }
 
   //---
 
-  void skipSpace(const std::string &str, int &i);
+  void setQuiet(bool b) { quiet_ = b; }
+  bool isQuiet() { return quiet_; }
 
-  double stod(const std::string &str, bool &ok);
-  long   stol(const std::string &str, bool &ok);
+  //---
 
-  // read string at file pos
-  bool readString(const std::string &str, int &i, std::string &str1);
+  void setPrintFlat(bool b) { printFlat_ = b; }
+  bool isPrintFlat() { return printFlat_; }
 
-  // read number at file pos
-  bool readNumber(const std::string &str, int &i, std::string &str1);
+  //---
 
-  // read object at file pos
-  bool readObject(const std::string &str, int &i, Object *&obj);
+  void setStringToReal(bool b) { stringToReal_ = b; }
+  bool isStringToReal() { return stringToReal_; }
 
-  // read array at file pos
-  bool readArray(const std::string &str, int &i, Array *&array);
-
-  // read value at file pos
-  bool readValue(const std::string &str, int &i, Value *&value);
-
-  bool readLine(FILE *fp, std::string &line);
+  //---
 
   // load file and return root value
   bool loadFile(const std::string &filename, Value *&value);
@@ -374,6 +351,109 @@ namespace CJson {
 
     return true;
   }
+
+  // load string and return root value
+  bool loadString(const std::string &filename, Value *&value);
+
+  //---
+
+  template<typename FUNC>
+  void processNodes(const Value *value, const FUNC &f) {
+    return processNameNodes(COptString(), value, 0, f);
+  }
+
+  template<typename FUNC>
+  void processNameNodes(const COptString &name, const Value *value, int depth, const FUNC &f) {
+    if (! f(name, value, depth))
+      return;
+
+    switch (value->type()) {
+      case ValueType::VALUE_OBJECT: {
+        auto obj = value->cast<Object>();
+
+        for (const auto &nv : obj->nameValueArray())
+          processNameNodes(COptString(nv.first), nv.second, depth + 1, f);
+
+        break;
+      }
+      case ValueType::VALUE_ARRAY: {
+        auto array = value->cast<Array>();
+
+        for (const auto &v : array->values())
+          processNameNodes(COptString(), v, depth + 1, f);
+
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  //---
+
+  template<typename T>
+  bool getValues(const Object *obj, const std::string &name, std::vector<T> &values) {
+    auto f = [&](const T &value) { values.push_back(value); };
+
+    return processValues<T,decltype(f)>(obj, name, f);
+  }
+
+  //---
+
+  /* match values:
+   *  fields are separated by slash '/'
+   *  values can be grouped using braces {<match>,<match>,...}
+   *  arrays are added using square brackets with optional index range [<start>:<end>]
+   *  list of object keys can be returned using ?
+   *  array index can be added using #
+   *
+   *  e.g. "head/[1:3]/{name1,name2}/?
+   */
+  bool matchValues(Value *value, const std::string &match, Array::Values &values);
+
+  bool matchValues(Value *value, int i, const std::string &match, Array::Values &values);
+
+  //---
+
+ private:
+  template<typename Tag, typename T>
+  struct TypeMap {
+    typedef CJson::Null Type;
+  };
+
+  template<typename Tag>
+  struct TypeMap<Tag, std::string> {
+    typedef CJson::String Type;
+  };
+
+  template<typename Tag>
+  struct TypeMap<Tag, double> {
+    typedef CJson::Number Type;
+  };
+
+  //---
+
+  static double stod(const std::string &str, bool &ok);
+  static long   stol(const std::string &str, bool &ok);
+
+  //---
+
+  // read string at file pos
+  bool readString(CStrParse &parse, std::string &str1);
+
+  // read number at file pos
+  bool readNumber(CStrParse &parse, std::string &str1);
+
+  // read object at file pos
+  bool readObject(CStrParse &parse, Object *&obj);
+
+  // read array at file pos
+  bool readArray(CStrParse &parse, Array *&array);
+
+  // read value at file pos
+  bool readValue(CStrParse &parse, Value *&value);
+
+  bool readLine(FILE *fp, std::string &line);
 
   template<typename T, typename FUNC>
   bool processValues(const Object *obj, const std::string &name, const FUNC &f) {
@@ -397,7 +477,7 @@ namespace CJson {
       }
     }
     else {
-      typedef typename TypeMap<T>::Type Type;
+      typedef typename TypeMap<void,T>::Type Type;
 
       Type *v;
 
@@ -410,66 +490,14 @@ namespace CJson {
     return true;
   }
 
-  template<typename T>
-  bool getValues(const Object *obj, const std::string &name, std::vector<T> &values) {
-    auto f = [&](const T &value) { values.push_back(value); };
-
-    return processValues<T,decltype(f)>(obj, name, f);
-  }
-
-  template<typename FUNC>
-  void processNodes(const Value *value, const FUNC &f) {
-    return processNameNodes(COptString(), value, 0, f);
-  }
-
-  template<typename FUNC>
-  void processNameNodes(const COptString &name, const Value *value, int depth, const FUNC &f) {
-    if (! f(name, value, depth))
-      return;
-
-    switch (value->type()) {
-      case VALUE_OBJECT: {
-        auto obj = value->cast<Object>();
-
-        for (const auto &nv : obj->nameValueArray())
-          processNameNodes(COptString(nv.first), nv.second, depth + 1, f);
-
-        break;
-      }
-      case VALUE_ARRAY : {
-        auto array = value->cast<Array>();
-
-        for (const auto &v : array->values())
-          processNameNodes(COptString(), v, depth + 1, f);
-
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
   //------
-
-  /* match values:
-   *  fields are separated by slash '/'
-   *  values can be grouped using braces {<match>,<match>,...}
-   *  arrays are added using square brackets with optional index range [<start>:<end>]
-   *  list of object keys can be returned using ?
-   *  array index can be added using #
-   *
-   *  e.g. "head/[1:3]/{name1,name2}/?
-   */
-  bool matchValues(Value *value, const std::string &match, Array::Values &values);
-
-  bool matchValues(Value *value, int i, const std::string &match, Array::Values &values);
 
   bool matchObject(Value *value, const std::string &match, Value* &value1);
 
   bool matchArray(Value *value, const std::string &lhs, const std::string &rhs,
                   Array::Values &values);
   bool matchList(Value *value, int ind, const std::string &lhs, const std::string &rhs,
-                  Array::Values &values);
+                 Array::Values &values);
 
   bool matchHier(Value *value, int ind, const std::string &lhs, const std::string &rhs,
                  Array::Values &values);
@@ -488,6 +516,15 @@ namespace CJson {
   Null*   createNull();
   Object* createObject();
   Array*  createArray();
-}
+
+  //------
+
+ private:
+  bool strict_       = false;
+  bool debug_        = false;
+  bool quiet_        = false;
+  bool printFlat_    = false;
+  bool stringToReal_ = false;
+};
 
 #endif

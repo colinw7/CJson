@@ -1,37 +1,23 @@
 #include <CJson.h>
+#include <CStrParse.h>
+#include <CUtf8.h>
 
-namespace CJson {
+namespace {
+  inline int hexCharValue(char c) {
+    if (isdigit(c)) return (c - '0');
 
-static bool debug        = false;
-static bool quiet        = false;
-static bool printFlat    = false;
-static bool stringToReal = false;
-
-void setDebug(bool b) { debug = b; }
-bool isDebug() { return debug; }
-
-void setQuiet(bool b) { quiet = b; }
-bool isQuiet() { return quiet; }
-
-void setPrintFlat(bool b) { printFlat = b; }
-bool isPrintFlat() { return printFlat; }
-
-void setStringToReal(bool b) { stringToReal = b; }
-bool isStringToReal() { return stringToReal; }
-
+    return (tolower(c) - 'a' + 10);
+  }
 }
 
 //------
 
-void
 CJson::
-skipSpace(const std::string &str, int &i)
+CJson()
 {
-  int len = str.size();
-
-  while (i < len && isspace(str[i]))
-    ++i;
 }
+
+//------
 
 double
 CJson::
@@ -68,43 +54,65 @@ stol(const std::string &str, bool &ok)
 // read string at file pos
 bool
 CJson::
-readString(const std::string &str, int &i, std::string &str1)
+readString(CStrParse &parse, std::string &str1)
 {
-  int len = str.size();
+  if (! parse.isChar('\"'))
+    return false;
 
-  if (i >= len || str[i] != '\"') return false;
+  parse.skipChar();
 
-  ++i;
+  while (! parse.eof()) {
+    if      (parse.isChar('\\') && ! parse.neof(1)) {
+      parse.skipChar();
 
-  while (i < len) {
-    if      (str[i] == '\\' && i < len - 1) {
-      ++i;
-
-      char c = str[i++];
+      char c = parse.readChar();
 
       switch (c) {
-        default : str1 += c; break;
-        case 'b': str1 += '\b'; break;
-        case 'f': str1 += '\f'; break;
-        case 'n': str1 += '\n'; break;
-        case 'r': str1 += '\r'; break;
-        case 'y': str1 += '\t'; break;
-        case 'u': {
-          // TODO - 4 hexadecimal digits
+        case '\"': str1 += '\"'; break;
+        case '\\': str1 += '\\'; break;
+        case '/' : str1 += '/' ; break;
+        case 'b' : str1 += '\b'; break;
+        case 'f' : str1 += '\f'; break;
+        case 'n' : str1 += '\n'; break;
+        case 'r' : str1 += '\r'; break;
+        case 't' : str1 += '\t'; break;
+        case 'u' : {
+          // 4 hexadecimal digits
+          long i = 0;
+
+          for (int j = 0; j < 4; ++j) {
+            if (! parse.isXDigit())
+              return false;
+
+            char c = parse.readChar();
+
+            i = (i << 4) | (hexCharValue(c) & 0xF);
+          }
+
+          CUtf8::append(str1, i);
+
+          break;
+        }
+        default: {
+          if (isStrict())
+            return false;
+
+          str1 += c;
+
           break;
         }
       }
     }
-    else if (str[i] == '\"')
+    else if (parse.isChar('\"'))
       break;
     else
-      str1 += str[i++];
+      str1 += parse.readChar();
   }
 
-  if (i >= len || str[i] != '\"')
+  if (parse.eof() || ! parse.isChar('\"'))
     return false;
 
-  ++i;
+  parse.skipChar();
 
   return true;
 }
@@ -112,39 +120,48 @@ readString(const std::string &str, int &i, std::string &str1)
 // read numner at file pos
 bool
 CJson::
-readNumber(const std::string &str, int &i, std::string &str1)
+readNumber(CStrParse &parse, std::string &str1)
 {
-  int len = str.size();
+  if (parse.eof())
+    return false;
 
-  if (i >= len) return false;
+  if (parse.isChar('-'))
+    str1 += parse.readChar();
 
-  if (str[i] == '-')
-    str1 += str[i++];
-
-  if      (i < len && str[i] == '0')
-    str1 += str[i++];
-  else if (i < len && isdigit(str[i])) {
-    while (i < len && isdigit(str[i]))
-      str1 += str[i++];
+  // TODO: octal, hexadecimal
+  if      (parse.isChar('0'))
+    str1 += parse.readChar();
+  else if (parse.isDigit()) {
+    while (parse.isDigit())
+      str1 += parse.readChar();
   }
   else
     return false;
 
-  if (i < len && str[i] == '.') {
-    str1 += str[i++];
+  if (parse.isChar('.')) {
+    str1 += parse.readChar();
 
-    while (i < len && isdigit(str[i]))
-      str1 += str[i++];
+    if (isStrict()) {
+      if (! parse.isDigit())
+        return false;
+    }
+
+    while (parse.isDigit())
+      str1 += parse.readChar();
   }
 
-  if (i < len && (str[i] == 'e' || str[i] == 'E')) {
-    str1 += str[i++];
+  // [Ee][+-][0-9][0-9]*
+  if (parse.isOneOf("eE")) {
+    str1 += parse.readChar();
 
-    if (i < len && (str[i] == '+' || str[i] == '-'))
-      str1 += str[i++];
+    if (parse.isOneOf("+-"))
+      str1 += parse.readChar();
 
-    while (i < len && isdigit(str[i]))
-      str1 += str[i++];
+    if (! parse.isDigit())
+      return false;
+
+    while (parse.isDigit())
+      str1 += parse.readChar();
   }
 
   return true;
@@ -153,61 +170,73 @@ readNumber(const std::string &str, int &i, std::string &str1)
 // read object at file pos
 bool
 CJson::
-readObject(const std::string &str, int &i, Object *&obj)
+readObject(CStrParse &parse, Object *&obj)
 {
-  int len = str.size();
-
-  if (i >= len || str[i] != '{')
+  if (! parse.isChar('{'))
     return false;
+
+  bool open = false;
+
+  parse.skipChar();
 
   obj = createObject();
 
-  ++i;
+  while (! parse.eof()) {
+    parse.skipSpace();
 
-  while (i < len) {
-    skipSpace(str, i);
+    if (parse.isChar('}'))
+      break;
 
     std::string name;
 
-    if (! readString(str, i, name)) {
+    if (! readString(parse, name)) {
       delete obj;
       return false;
     }
 
-    skipSpace(str, i);
+    parse.skipSpace();
 
-    if (i >= len || str[i] != ':') {
+    if (! parse.isChar(':')) {
       delete obj;
       return false;
     }
 
-    ++i;
+    parse.skipChar();
 
-    skipSpace(str, i);
+    parse.skipSpace();
 
     Value *value;
 
-    if (! readValue(str, i, value)) {
+    if (! readValue(parse, value)) {
       delete obj;
       return false;
     }
 
-    skipSpace(str, i);
+    parse.skipSpace();
 
     obj->setNamedValue(name, value);
 
-    if (i >= len || str[i] != ',')
+    open = false;
+
+    if (! parse.isChar(','))
       break;
 
-    ++i;
+    parse.skipChar();
+
+    open = true;
   }
 
-  if (i >= len || str[i] != '}') {
+  if (open) {
     delete obj;
     return false;
   }
 
-  ++i;
+  if (! parse.isChar('}')) {
+    delete obj;
+    return false;
+  }
+
+  parse.skipChar();
 
   return true;
 }
@@ -215,46 +244,55 @@ readObject(const std::string &str, int &i, Object *&obj)
 // read array at file pos
 bool
 CJson::
-readArray(const std::string &str, int &i, Array *&array)
+readArray(CStrParse &parse, Array *&array)
 {
-  int len = str.size();
-
-  if (i >= len || str[i] != '[')
+  if (! parse.isChar('['))
     return false;
+
+  bool open = false;
+
+  parse.skipChar();
 
   array = createArray();
 
-  ++i;
+  while (! parse.eof()) {
+    parse.skipSpace();
 
-  while (i < len) {
-    skipSpace(str, i);
-
-    if (str[i] == ']')
+    if (parse.isChar(']'))
       break;
 
     Value *value;
 
-    if (! readValue(str, i, value)) {
+    if (! readValue(parse, value)) {
       delete array;
       return false;
     }
 
     array->addValue(value);
 
-    skipSpace(str, i);
+    parse.skipSpace();
 
-    if (i >= len || str[i] != ',')
+    open = false;
+
+    if (! parse.isChar(','))
       break;
 
-    ++i;
+    parse.skipChar();
+
+    open = true;
   }
 
-  if (i >= len || str[i] != ']') {
+  if (open) {
     delete array;
     return false;
   }
 
-  ++i;
+  if (! parse.isChar(']')) {
+    delete array;
+    return false;
+  }
+
+  parse.skipChar();
 
   return true;
 }
@@ -262,18 +300,17 @@ readArray(const std::string &str, int &i, Array *&array)
 // read value at file pos
 bool
 CJson::
-readValue(const std::string &str, int &i, Value *&value)
+readValue(CStrParse &parse, Value *&value)
 {
-  int len = str.size();
+  if (parse.eof())
+    return false;
 
-  if (i >= len) return false;
-
-  char c = str[i];
+  char c = parse.getCharAt();
 
   if      (c == '\"') {
     std::string str1;
 
-    if (! readString(str, i, str1))
+    if (! readString(parse, str1))
       return false;
 
     value = createString(str1);
@@ -281,7 +318,7 @@ readValue(const std::string &str, int &i, Value *&value)
   else if (c == '-' || isdigit(c)) {
     std::string str1;
 
-    if (! readNumber(str, i, str1))
+    if (! readNumber(parse, str1))
       return false;
 
     bool ok;
@@ -293,7 +330,7 @@ readValue(const std::string &str, int &i, Value *&value)
   else if (c == '{') {
     Object *obj;
 
-    if (! readObject(str, i, obj))
+    if (! readObject(parse, obj))
       return false;
 
     value = obj;
@@ -301,29 +338,25 @@ readValue(const std::string &str, int &i, Value *&value)
   else if (c == '[') {
     Array *array;
 
-    if (! readArray(str, i, array))
+    if (! readArray(parse, array))
       return false;
 
     value = array;
   }
-  else if (i < len - 3 &&
-           str[i] == 't' && str[i + 1] == 'r' && str[i + 2] == 'u' && str[i + 3] == 'e') {
+  else if (parse.isString("true")) {
+    parse.skipChars("true");
+
     value = createTrue();
-
-    i += 4;
   }
-  else if (i < len - 4 &&
-           str[i + 0] == 'f' && str[i + 1] == 'a' && str[i + 2] == 'l' &&
-           str[i + 3] == 's' && str[i + 4] == 'e') {
+  else if (parse.isString("false")) {
+    parse.skipChars("false");
+
     value = createFalse();
-
-    i += 5;
   }
-  else if (i < len - 3 &&
-           str[i] == 'n' && str[i + 1] == 'u' && str[i + 2] == 'l' && str[i + 3] == 'l') {
-    value = createNull();
+  else if (parse.isString("null")) {
+    parse.skipChars("null");
 
-    i += 4;
+    value = createNull();
   }
   else
     return false;
@@ -369,30 +402,49 @@ loadFile(const std::string &filename, Value *&value)
 
   fclose(fp);
 
+  //---
+
+  return loadString(lines, value);
+}
+
+bool
+CJson::
+loadString(const std::string &lines, Value *&value)
+{
   std::vector<std::string> strs;
 
-  int i   = 0;
-  int len = lines.size();
+  CStrParse parse(lines);
 
-  skipSpace(lines, i);
+  parse.skipSpace();
 
-  if      (i < len && lines[i] == '{') { // object
+  if      (parse.isChar('{')) { // object
     Object *obj;
 
-    if (! readObject(lines, i, obj))
+    if (! readObject(parse, obj))
       return false;
 
     value = obj;
   }
-  else if (i < len && lines[i] == '[') { // array
+  else if (parse.isChar('[')) { // array
     Array *array;
 
-    if (! readArray(lines, i, array))
+    if (! readArray(parse, array))
       return false;
 
     value = array;
   }
-  else
+  else {
+    Value *value1;
+
+    if (! readValue(parse, value1))
+      return false;
+
+    value = value1;
+  }
+
+  parse.skipSpace();
+
+  if (! parse.eof())
     return false;
 
   return true;
@@ -837,49 +889,49 @@ CJson::String *
 CJson::
 createString(const std::string &str)
 {
-  return new String(str);
+  return new String(this, str);
 }
 
 CJson::Number *
 CJson::
 createNumber(double r)
 {
-  return new Number(r);
+  return new Number(this, r);
 }
 
 CJson::True *
 CJson::
 createTrue()
 {
-  return new True;
+  return new True(this);
 }
 
 CJson::False *
 CJson::
 createFalse()
 {
-  return new False;
+  return new False(this);
 }
 
 CJson::Null *
 CJson::
 createNull()
 {
-  return new Null;
+  return new Null(this);
 }
 
 CJson::Object *
 CJson::
 createObject()
 {
-  return new Object;
+  return new Object(this);
 }
 
 CJson::Array *
 CJson::
 createArray()
 {
-  return new Array;
+  return new Array(this);
 }
 
 //------
@@ -965,11 +1017,11 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "{";
 
   for (const auto &nv : nameValueArray_) {
-    if (! isPrintFlat()) {
+    if (! json_->isPrintFlat()) {
       if (! first) os << ",";
     }
     else {
@@ -983,7 +1035,7 @@ printReal(std::ostream &os) const
     first = false;
   }
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "}";
 }
 
@@ -993,11 +1045,11 @@ print(std::ostream &os) const
 {
   bool first = true;
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "{";
 
   for (const auto &nv : nameValueArray_) {
-    if (! isPrintFlat()) {
+    if (! json_->isPrintFlat()) {
       if (! first) os << ",";
     }
     else {
@@ -1011,7 +1063,7 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "}";
 }
 
@@ -1023,11 +1075,11 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "[";
 
   for (const auto &v : values_) {
-    if (! isPrintFlat()) {
+    if (! json_->isPrintFlat()) {
       if (! first) os << ",";
     }
     else {
@@ -1039,7 +1091,7 @@ printReal(std::ostream &os) const
     first = false;
   }
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "]";
 }
 //------
@@ -1050,11 +1102,11 @@ print(std::ostream &os) const
 {
   bool first = true;
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "[";
 
   for (const auto &v : values_) {
-    if (! isPrintFlat()) {
+    if (! json_->isPrintFlat()) {
       if (! first) os << ",";
     }
     else {
@@ -1066,6 +1118,6 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! isPrintFlat())
+  if (! json_->isPrintFlat())
     os << "]";
 }

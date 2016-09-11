@@ -25,6 +25,7 @@ CPPFLAGS = \
 LFLAGS = \
 -L$(LIB_DIR) \
 -L../../CJson/lib \
+-L../../CStrUtil/lib \
 
 clean:
 	$(RM) -f *.o
@@ -36,4 +37,4 @@ clean:
 	$(CC) -c $< -o $(OBJ_DIR)/$*.o $(CPPFLAGS)
 
 $(BIN_DIR)/CJsonTest: $(OBJS) $(LIB_DIR)/libCJson.a
-	$(CC) $(LDEBUG) -o $(BIN_DIR)/CJsonTest $(OBJS) $(LFLAGS) -lCJson
+	$(CC) $(LDEBUG) -o $(BIN_DIR)/CJsonTest $(OBJS) $(LFLAGS) -lCJson -lCStrUtil

@@ -3,6 +3,8 @@
 int
 main(int argc, char **argv)
 {
+  CJson json;
+
   std::string filename;
   std::string match;
   bool        shortFlag = false;
@@ -12,13 +14,13 @@ main(int argc, char **argv)
       std::string arg(&argv[i][1]);
 
       if      (arg == "debug")
-        CJson::setDebug(true);
+        json.setDebug(true);
       else if (arg == "quiet")
-        CJson::setQuiet(true);
+        json.setQuiet(true);
       else if (arg == "flat")
-        CJson::setPrintFlat(true);
+        json.setPrintFlat(true);
       else if (arg == "to_real")
-        CJson::setStringToReal(true);
+        json.setStringToReal(true);
       else if (arg == "match")
         match = argv[++i];
       else if (arg == "short")
@@ -40,16 +42,21 @@ main(int argc, char **argv)
 
   CJson::Value *value;
 
-  if (! CJson::loadFile(filename.c_str(), value))
+  if (! json.loadFile(filename.c_str(), value)) {
+    std::cerr << "Parse failed" << std::endl;
     exit(1);
+  }
+
+  if (json.isDebug())
+    std::cout << *value << std::endl;
 
   if (match != "") {
     CJson::Array::Values values;
 
-    if (! CJson::matchValues(value, match, values))
+    if (! json.matchValues(value, match, values))
       exit(1);
 
-    if (CJson::isStringToReal()) {
+    if (json.isStringToReal()) {
       for (const auto &v : values) {
         v->printReal(std::cout);
 
@@ -75,7 +82,7 @@ main(int argc, char **argv)
     std::string           package;
     PackageNameValueArray packageNameValues;
 
-    CJson::processNodes(value, [&package, &packageNameValues]
+    json.processNodes(value, [&package, &packageNameValues]
      (const COptString & /*name*/, const CJson::Value *v, int /*depth*/) {
       if (v->isObject()) {
         const CJson::Object *obj = v->cast<CJson::Object>();
@@ -83,7 +90,7 @@ main(int argc, char **argv)
         if (obj->hasName("children")) {
           CJson::Value *nameValue;
 
-          if ( obj->getNamedValue("name", nameValue))
+          if (obj->getNamedValue("name", nameValue))
             package = nameValue->cast<CJson::String>()->value();
 
           return true;
