@@ -1,6 +1,7 @@
 #include <CJson.h>
 #include <CStrParse.h>
 #include <CUtf8.h>
+#include <set>
 
 namespace {
   inline int hexCharValue(char c) {
@@ -212,6 +213,8 @@ readObject(CStrParse &parse, Object *&obj)
       return false;
     }
 
+    value->setParent(obj);
+
     parse.skipSpace();
 
     obj->setNamedValue(name, value);
@@ -267,6 +270,8 @@ readArray(CStrParse &parse, Array *&array)
       delete array;
       return false;
     }
+
+    value->setParent(array);
 
     array->addValue(value);
 
@@ -388,6 +393,8 @@ bool
 CJson::
 loadFile(const std::string &filename, Value *&value)
 {
+  value = nullptr;
+
   FILE *fp = fopen(filename.c_str(), "r");
   if (! fp) return false;
 
@@ -949,6 +956,13 @@ toReal(double &r) const
 
 void
 CJson::String::
+print(std::ostream &os) const
+{
+  os << "\"" << str_ << "\"";
+}
+
+void
+CJson::String::
 printReal(std::ostream &os) const
 {
   double r;
@@ -964,13 +978,6 @@ CJson::String::
 printShort(std::ostream &os) const
 {
   os << str_;
-}
-
-void
-CJson::String::
-print(std::ostream &os) const
-{
-  os << "\"" << str_ << "\"";
 }
 
 //------
@@ -1011,32 +1018,63 @@ print(std::ostream &os) const
 
 //------
 
-void
+std::string
 CJson::Object::
-printReal(std::ostream &os) const
+to_string() const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat())
-    os << "{";
+  std::string str;
+
+  str += "{";
 
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << " ";
-    }
+    if (! first)
+      str += ",";
 
-    os << "\"" << nv.first << "\":";
+    str += "\"" + nv.first + "\":";
 
-    nv.second->printReal(os);
+    str += nv.second->to_string();
 
     first = false;
   }
 
-  if (! json_->isPrintFlat())
-    os << "}";
+  str += "}";
+
+  return str;
+}
+
+std::string
+CJson::Object::
+hierTypeName() const
+{
+  std::string typeName;
+
+  typeName += "{";
+
+  std::vector<std::string> types;
+
+  for (const auto &nv : nameValueArray_) {
+    std::string hierTypeName = nv.second->hierTypeName();
+
+    if (types.empty() || types.back() != hierTypeName)
+      types.push_back(hierTypeName);
+  }
+
+  int n = 0;
+
+  for (const auto &t : types) {
+    if (n > 0)
+      typeName += ",";
+
+    typeName += t;
+
+    ++n;
+  }
+
+  typeName += "}";
+
+  return typeName;
 }
 
 void
@@ -1067,7 +1105,59 @@ print(std::ostream &os) const
     os << "}";
 }
 
+void
+CJson::Object::
+printReal(std::ostream &os) const
+{
+  bool first = true;
+
+  if (! json_->isPrintFlat())
+    os << "{";
+
+  for (const auto &nv : nameValueArray_) {
+    if (! json_->isPrintFlat()) {
+      if (! first) os << ",";
+    }
+    else {
+      if (! first) os << " ";
+    }
+
+    os << "\"" << nv.first << "\":";
+
+    nv.second->printReal(os);
+
+    first = false;
+  }
+
+  if (! json_->isPrintFlat())
+    os << "}";
+}
+
 //------
+
+std::string
+CJson::Array::
+to_string() const
+{
+  bool first = true;
+
+  std::string str;
+
+  str += "[";
+
+  for (const auto &v : values_) {
+    if (! first)
+      str += ",";
+
+    str += v->to_string();
+
+    first = false;
+  }
+
+  str += "]";
+
+  return str;
+}
 
 void
 CJson::Array::
@@ -1094,7 +1184,41 @@ printReal(std::ostream &os) const
   if (! json_->isPrintFlat())
     os << "]";
 }
+
 //------
+
+std::string
+CJson::Array::
+hierTypeName() const
+{
+  std::string typeName;
+
+  typeName += "[";
+
+  std::vector<std::string> types;
+
+  for (const auto &v : values_) {
+    std::string hierTypeName = v->hierTypeName();
+
+    if (types.empty() || types.back() != hierTypeName)
+      types.push_back(hierTypeName);
+  }
+
+  int n = 0;
+
+  for (const auto &t : types) {
+    if (n > 0)
+      typeName += ",";
+
+    typeName += t;
+
+    ++n;
+  }
+
+  typeName += "]";
+
+  return typeName;
+}
 
 void
 CJson::Array::

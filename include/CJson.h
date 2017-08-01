@@ -35,6 +35,9 @@ class CJson {
 
     virtual ~Value() { }
 
+    Value *parent() const { return parent_; }
+    void setParent(Value *p) { parent_ = p; }
+
     ValueType type() const { return type_; }
 
     bool isString() const { return type_ == ValueType::VALUE_STRING; }
@@ -46,6 +49,12 @@ class CJson {
     bool isArray () const { return type_ == ValueType::VALUE_ARRAY ; }
 
     bool isComposite() const { return isObject() || isArray(); }
+
+    virtual uint numValues() const { return 1; }
+
+    virtual std::string indexKey(uint i) { assert(i == 0); return ""; }
+
+    virtual Value *indexValue(uint i) { assert(i == 0); return this; }
 
     template<typename T>
     T *cast() {
@@ -65,6 +74,10 @@ class CJson {
 
     virtual const char *typeName() const { return "value"; }
 
+    virtual std::string hierTypeName() const { return typeName(); }
+
+    virtual std::string to_string() const = 0;
+
     virtual void print(std::ostream &os=std::cout) const = 0;
 
     virtual void printReal(std::ostream &os=std::cout) const { print(os); }
@@ -78,8 +91,9 @@ class CJson {
     }
 
    protected:
-    CJson*    json_ { 0 };
-    ValueType type_ { ValueType::VALUE_NONE };
+    CJson*    json_   { nullptr };
+    Value*    parent_ { nullptr };
+    ValueType type_   { ValueType::VALUE_NONE };
   };
 
   //---
@@ -97,11 +111,13 @@ class CJson {
 
     const char *typeName() const override { return "string"; }
 
+    std::string to_string() const override { return str_; }
+
+    void print(std::ostream &os=std::cout) const override;
+
     void printReal(std::ostream &os=std::cout) const override;
 
     void printShort(std::ostream &os=std::cout) const override;
-
-    void print(std::ostream &os=std::cout) const override;
 
    private:
     std::string str_;
@@ -119,6 +135,8 @@ class CJson {
     double value() const { return value_; }
 
     const char *typeName() const override { return "number"; }
+
+    std::string to_string() const override { return std::to_string(value_); }
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -139,6 +157,8 @@ class CJson {
 
     const char *typeName() const override { return "true"; }
 
+    std::string to_string() const override { return "true"; }
+
     void print(std::ostream &os=std::cout) const override;
   };
 
@@ -155,6 +175,8 @@ class CJson {
 
     const char *typeName() const override { return "false"; }
 
+    std::string to_string() const override { return "false"; }
+
     void print(std::ostream &os=std::cout) const override;
   };
 
@@ -170,6 +192,8 @@ class CJson {
     void *value() const { return nullptr; }
 
     const char *typeName() const override { return "null"; }
+
+    std::string to_string() const override { return "null"; }
 
     void print(std::ostream &os=std::cout) const override;
   };
@@ -197,20 +221,6 @@ class CJson {
 
     const NameValueArray &nameValueArray() const { return nameValueArray_; }
 
-    bool hasName(const std::string &name) const {
-      NameValueMap::const_iterator p = nameValueMap_.find(name);
-
-      return (p != nameValueMap_.end());
-    }
-
-    void setNamedValue(const std::string &name, Value *value) {
-      NameValueMap::iterator p = nameValueMap_.find(name);
-
-      nameValueMap_[name] = value;
-
-      nameValueArray_.push_back(NameValue(name, value));
-    }
-
     void getNames(std::vector<std::string> &names) {
       for (const auto &nv : nameValueArray_)
         names.push_back(nv.first);
@@ -221,8 +231,23 @@ class CJson {
         values.push_back(nv.second);
     }
 
+    bool hasName(const std::string &name) const {
+      auto p = nameValueMap_.find(name);
+
+      return (p != nameValueMap_.end());
+    }
+
+    void setNamedValue(const std::string &name, Value *value) {
+      auto p = nameValueMap_.find(name);
+
+      if (p == nameValueMap_.end())
+        p = nameValueMap_.insert(p, NameValueMap::value_type(name, value));
+
+      nameValueArray_.emplace_back(name, value);
+    }
+
     bool getNamedValue(const std::string &name, Value *&value) const {
-      NameValueMap::const_iterator p = nameValueMap_.find(name);
+      auto p = nameValueMap_.find(name);
 
       if (p == nameValueMap_.end())
         return false;
@@ -247,11 +272,33 @@ class CJson {
       return true;
     }
 
+    bool indexNameValue(uint i, std::string &name, Value* &value) const {
+      if (i > nameValueArray_.size())
+        return false;
+
+      const NameValue &nameValue = nameValueArray_[i];
+
+      name  = nameValue.first;
+      value = nameValue.second;
+
+      return true;
+    }
+
     const char *typeName() const override { return "object"; }
 
-    void printReal(std::ostream &os=std::cout) const override;
+    std::string hierTypeName() const override;
+
+    uint numValues() const override { return nameValueArray_.size(); }
+
+    std::string indexKey(uint i) override { return nameValueArray_[i].first; }
+
+    Value *indexValue(uint i) override { return nameValueArray_[i].second; }
+
+    std::string to_string() const override;
 
     void print(std::ostream &os=std::cout) const override;
+
+    void printReal(std::ostream &os=std::cout) const override;
 
    private:
     NameValueMap   nameValueMap_;
@@ -294,9 +341,19 @@ class CJson {
 
     const char *typeName() const override { return "array"; }
 
-    void printReal(std::ostream &os=std::cout) const override;
+    std::string hierTypeName() const override;
+
+    uint numValues() const override { return size(); }
+
+    std::string indexKey(uint) override { return ""; }
+
+    Value *indexValue(uint i) override { return values_[i]; }
+
+    std::string to_string() const override;
 
     void print(std::ostream &os=std::cout) const override;
+
+    void printReal(std::ostream &os=std::cout) const override;
 
    private:
     Values values_;

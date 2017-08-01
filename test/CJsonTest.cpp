@@ -7,6 +7,7 @@ main(int argc, char **argv)
 
   std::string filename;
   std::string match;
+  bool        typeFlag = false;
   bool        shortFlag = false;
 
   for (auto i = 1; i < argc; ++i) {
@@ -23,6 +24,8 @@ main(int argc, char **argv)
         json.setStringToReal(true);
       else if (arg == "match")
         match = argv[++i];
+      else if (arg == "type")
+        typeFlag = true;
       else if (arg == "short")
         shortFlag = true;
       else if (arg == "h" || arg == "help") {
@@ -50,29 +53,41 @@ main(int argc, char **argv)
   if (json.isDebug())
     std::cout << *value << std::endl;
 
-  if (match != "") {
+  if      (match != "") {
     CJson::Array::Values values;
 
     if (! json.matchValues(value, match, values))
       exit(1);
 
-    if (json.isStringToReal()) {
+    if (typeFlag) {
       for (const auto &v : values) {
-        v->printReal(std::cout);
-
-        std::cout << std::endl;
+        std::cout << v->hierTypeName() << std::endl;
       }
     }
     else {
-      for (const auto &v : values) {
-        if (shortFlag)
-          v->printShort(std::cout);
-        else
-          v->print(std::cout);
+      if (json.isStringToReal()) {
+        for (const auto &v : values) {
+          v->printReal(std::cout);
 
-        std::cout << std::endl;
+          std::cout << std::endl;
+        }
+      }
+      else {
+        for (const auto &v : values) {
+          if      (typeFlag)
+            std::cout << v->hierTypeName();
+          else if (shortFlag)
+            v->printShort(std::cout);
+          else
+            v->print(std::cout);
+
+          std::cout << std::endl;
+        }
       }
     }
+  }
+  else if (typeFlag) {
+    std::cout << value->hierTypeName() << std::endl;
   }
   else {
     typedef std::pair<std::string,double>        NameValue;
