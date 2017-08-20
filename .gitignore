@@ -1,5 +1,11 @@
 *.o
+*.a
 
 bin/
 obj/
 lib/
+
+moc_*
+
+.moc
+.ui
