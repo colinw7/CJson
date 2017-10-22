@@ -1,12 +1,11 @@
 #ifndef CQJsonTree_H
 #define CQJsonTree_H
 
-#include <QTreeView>
+#include <CQTreeView.h>
 
 class CQJsonModel;
-class CQHeaderView;
 
-class CQJsonTree : public QTreeView {
+class CQJsonTree : public CQTreeView {
   Q_OBJECT
 
  public:
@@ -15,8 +14,7 @@ class CQJsonTree : public QTreeView {
   void setModel(CQJsonModel *model);
 
  private:
-  CQJsonModel*  model_  { nullptr };
-  CQHeaderView* header_ { nullptr };
+  CQJsonModel* model_ { nullptr };
 };
 
 #endif

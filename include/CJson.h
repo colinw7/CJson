@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-#include <COptVal.h>
+#include <boost/optional.hpp>
 
 class CStrParse;
 
@@ -26,6 +26,8 @@ class CJson {
     VALUE_ARRAY
   };
 
+  typedef boost::optional<std::string> OptString;
+
   //---
 
   // Json Value base class
@@ -35,8 +37,12 @@ class CJson {
 
     virtual ~Value() { }
 
+    //---
+
     Value *parent() const { return parent_; }
     void setParent(Value *p) { parent_ = p; }
+
+    //---
 
     ValueType type() const { return type_; }
 
@@ -50,11 +56,15 @@ class CJson {
 
     bool isComposite() const { return isObject() || isArray(); }
 
+    //---
+
     virtual uint numValues() const { return 1; }
 
     virtual std::string indexKey(uint i) { assert(i == 0); return ""; }
 
     virtual Value *indexValue(uint i) { assert(i == 0); return this; }
+
+    //---
 
     template<typename T>
     T *cast() {
@@ -72,11 +82,17 @@ class CJson {
       return t;
     }
 
+    //---
+
     virtual const char *typeName() const { return "value"; }
 
     virtual std::string hierTypeName() const { return typeName(); }
 
+    //---
+
     virtual std::string to_string() const = 0;
+
+    //---
 
     virtual void print(std::ostream &os=std::cout) const = 0;
 
@@ -105,13 +121,21 @@ class CJson {
      Value(json, ValueType::VALUE_STRING), str_(str) {
     }
 
+    //---
+
     const std::string &value() const { return str_; }
 
     bool toReal(double &r) const;
 
+    //---
+
     const char *typeName() const override { return "string"; }
 
+    //---
+
     std::string to_string() const override { return str_; }
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -132,11 +156,19 @@ class CJson {
      Value(json, ValueType::VALUE_NUMBER), value_(value) {
     }
 
+    //---
+
     double value() const { return value_; }
+
+    //---
 
     const char *typeName() const override { return "number"; }
 
+    //---
+
     std::string to_string() const override { return std::to_string(value_); }
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -153,11 +185,19 @@ class CJson {
      Value(json, ValueType::VALUE_TRUE) {
     }
 
+    //---
+
     bool value() const { return true; }
+
+    //---
 
     const char *typeName() const override { return "true"; }
 
+    //---
+
     std::string to_string() const override { return "true"; }
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
   };
@@ -171,11 +211,19 @@ class CJson {
      Value(json, ValueType::VALUE_FALSE) {
     }
 
+    //---
+
     bool value() const { return false; }
+
+    //---
 
     const char *typeName() const override { return "false"; }
 
+    //---
+
     std::string to_string() const override { return "false"; }
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
   };
@@ -189,11 +237,19 @@ class CJson {
      Value(json, ValueType::VALUE_NULL) {
     }
 
+    //---
+
     void *value() const { return nullptr; }
+
+    //---
 
     const char *typeName() const override { return "null"; }
 
+    //---
+
     std::string to_string() const override { return "null"; }
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
   };
@@ -216,6 +272,8 @@ class CJson {
       for (auto &nv : nameValueArray_)
         delete nv.second;
     }
+
+    //---
 
     const NameValueMap &nameValueMap() const { return nameValueMap_; }
 
@@ -273,7 +331,7 @@ class CJson {
     }
 
     bool indexNameValue(uint i, std::string &name, Value* &value) const {
-      if (i > nameValueArray_.size())
+      if (i >= nameValueArray_.size())
         return false;
 
       const NameValue &nameValue = nameValueArray_[i];
@@ -284,17 +342,39 @@ class CJson {
       return true;
     }
 
+    //---
+
     const char *typeName() const override { return "object"; }
 
     std::string hierTypeName() const override;
 
+    //---
+
     uint numValues() const override { return nameValueArray_.size(); }
 
-    std::string indexKey(uint i) override { return nameValueArray_[i].first; }
+    std::string indexKey(uint i) override {
+      assert(i < numValues());
 
-    Value *indexValue(uint i) override { return nameValueArray_[i].second; }
+      return nameValueArray_[i].first;
+    }
+
+    Value *indexValue(uint i) override {
+      assert(i < numValues());
+
+      return nameValueArray_[i].second;
+    }
+
+    //---
 
     std::string to_string() const override;
+
+    //---
+
+    bool isComposite() const;
+
+    int numComposite() const;
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -322,6 +402,8 @@ class CJson {
         delete v;
     }
 
+    //---
+
     const Values &values() const { return values_; }
 
     void addValue(Value *value) {
@@ -339,17 +421,29 @@ class CJson {
       return t;
     }
 
+    //---
+
     const char *typeName() const override { return "array"; }
 
     std::string hierTypeName() const override;
+
+    //---
 
     uint numValues() const override { return size(); }
 
     std::string indexKey(uint) override { return ""; }
 
-    Value *indexValue(uint i) override { return values_[i]; }
+    Value *indexValue(uint i) override {
+      assert(i < numValues());
+
+      return values_[i];
+    }
+
+    //---
 
     std::string to_string() const override;
+
+    //---
 
     void print(std::ostream &os=std::cout) const override;
 
@@ -416,11 +510,11 @@ class CJson {
 
   template<typename FUNC>
   void processNodes(const Value *value, const FUNC &f) {
-    return processNameNodes(COptString(), value, 0, f);
+    return processNameNodes(OptString(), value, 0, f);
   }
 
   template<typename FUNC>
-  void processNameNodes(const COptString &name, const Value *value, int depth, const FUNC &f) {
+  void processNameNodes(const OptString &name, const Value *value, int depth, const FUNC &f) {
     if (! f(name, value, depth))
       return;
 
@@ -429,7 +523,7 @@ class CJson {
         auto obj = value->cast<Object>();
 
         for (const auto &nv : obj->nameValueArray())
-          processNameNodes(COptString(nv.first), nv.second, depth + 1, f);
+          processNameNodes(OptString(nv.first), nv.second, depth + 1, f);
 
         break;
       }
@@ -437,7 +531,7 @@ class CJson {
         auto array = value->cast<Array>();
 
         for (const auto &v : array->values())
-          processNameNodes(COptString(), v, depth + 1, f);
+          processNameNodes(OptString(), v, depth + 1, f);
 
         break;
       }

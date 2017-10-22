@@ -17,7 +17,7 @@ class CQJsonTest : public QFrame {
   const QString &match() const { return match_; }
   void setMatch(const QString &s) { match_ = s; }
 
-  void load(const QString &filename);
+  void load(const QString &filename, bool hier);
 
  private:
   QString      match_;

@@ -1077,6 +1077,32 @@ hierTypeName() const
   return typeName;
 }
 
+bool
+CJson::Object::
+isComposite() const
+{
+  for (const auto &nv : nameValueArray_) {
+    if (nv.second->isComposite())
+      return true;
+  }
+
+  return false;
+}
+
+int
+CJson::Object::
+numComposite() const
+{
+  int n = 0;
+
+  for (const auto &nv : nameValueArray_) {
+    if (nv.second->isComposite())
+      ++n;
+  }
+
+  return n;
+}
+
 void
 CJson::Object::
 print(std::ostream &os) const

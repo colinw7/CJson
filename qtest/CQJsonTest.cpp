@@ -16,16 +16,20 @@ main(int argc, char **argv)
   std::vector<QString> filenames;
 
   QString match;
+  bool    hier = false;
 
   for (int i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
       std::string arg = &argv[i][1];
 
-      if (arg == "match") {
+      if      (arg == "match") {
         ++i;
 
         if (i < argc)
           match = argv[i];
+      }
+      else if (arg == "hier") {
+        hier = true;
       }
       else {
         std::cerr << "Invalid option '" << arg << "'" << std::endl;
@@ -46,7 +50,7 @@ main(int argc, char **argv)
   if (match != "")
     test.setMatch(match);
 
-  test.load(filenames[0]);
+  test.load(filenames[0], hier);
 
   test.show();
 
@@ -65,7 +69,7 @@ CQJsonTest()
 
 void
 CQJsonTest::
-load(const QString &filename)
+load(const QString &filename, bool hier)
 {
   model_ = new CQJsonModel;
 
@@ -74,7 +78,7 @@ load(const QString &filename)
   if (match_ != "")
     model_->applyMatch(match());
 
-  if (model_->isHierarchical()) {
+  if (model_->isHierarchical() || hier) {
     tree_ = new CQJsonTree;
 
     layout_->addWidget(tree_);
