@@ -14,7 +14,7 @@ CC            = gcc
 CXX           = g++
 DEFINES       = -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_CORE_LIB
 CFLAGS        = -m64 -pipe -O2 -fPIC -Wall -W -D_REENTRANT $(DEFINES)
-CXXFLAGS      = -m64 -pipe -std=c++11 -O2 -fPIC -Wall -W -D_REENTRANT $(DEFINES)
+CXXFLAGS      = -m64 -pipe -std=c++14 -O2 -fPIC -Wall -W -D_REENTRANT $(DEFINES)
 INCPATH       = -I. -I../qinclude -I../include -I../../CUtil/include -isystem /usr/include/x86_64-linux-gnu/qt5 -isystem /usr/include/x86_64-linux-gnu/qt5/QtWidgets -isystem /usr/include/x86_64-linux-gnu/qt5/QtGui -isystem /usr/include/x86_64-linux-gnu/qt5/QtCore -I.moc -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64
 QMAKE         = /usr/bin/qmake
 DEL_FILE      = rm -f
@@ -79,6 +79,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_eglfs_device_lib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimedia.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimediawidgets.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_opengl.pri \
@@ -187,6 +189,8 @@ Makefile: CQJson.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64/qmake.co
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_eglfs_device_lib_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui_private.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimedia.pri \
+		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimediawidgets.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network_private.pri \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_opengl.pri \
@@ -256,6 +260,8 @@ Makefile: CQJson.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64/qmake.co
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_eglfs_device_lib_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_gui_private.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimedia.pri:
+/usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_multimediawidgets.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_network_private.pri:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/modules/qt_lib_opengl.pri:
@@ -347,7 +353,6 @@ compiler_moc_header_make_all: .moc/moc_CQJsonModel.cpp .moc/moc_CQJsonTable.cpp 
 compiler_moc_header_clean:
 	-$(DEL_FILE) .moc/moc_CQJsonModel.cpp .moc/moc_CQJsonTable.cpp .moc/moc_CQJsonTree.cpp .moc/moc_CQHeaderView.cpp
 .moc/moc_CQJsonModel.cpp: ../include/CJson.h \
-		../../CUtil/include/COptVal.h \
 		../qinclude/CQJsonModel.h
 	/usr/lib/x86_64-linux-gnu/qt5/bin/moc $(DEFINES) -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++-64 -I/home/colinw/git/CJson/qsrc -I/home/colinw/git/CJson/qinclude -I/home/colinw/git/CJson/include -I/home/colinw/git/CUtil/include -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I/usr/include/c++/5 -I/usr/include/x86_64-linux-gnu/c++/5 -I/usr/include/c++/5/backward -I/usr/lib/gcc/x86_64-linux-gnu/5/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/5/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include ../qinclude/CQJsonModel.h -o .moc/moc_CQJsonModel.cpp
 
@@ -375,22 +380,18 @@ compiler_clean: compiler_moc_header_clean
 ####### Compile
 
 ../obj/CQJsonModel.o: CQJsonModel.cpp ../qinclude/CQJsonModel.h \
-		../include/CJson.h \
-		../../CUtil/include/COptVal.h
+		../include/CJson.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQJsonModel.o CQJsonModel.cpp
 
 ../obj/CQJsonTable.o: CQJsonTable.cpp ../qinclude/CQJsonTable.h \
 		../qinclude/CQJsonModel.h \
 		../include/CJson.h \
-		../../CUtil/include/COptVal.h \
 		CQHeaderView.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQJsonTable.o CQJsonTable.cpp
 
 ../obj/CQJsonTree.o: CQJsonTree.cpp ../qinclude/CQJsonTree.h \
 		../qinclude/CQJsonModel.h \
-		../include/CJson.h \
-		../../CUtil/include/COptVal.h \
-		CQHeaderView.h
+		../include/CJson.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o ../obj/CQJsonTree.o CQJsonTree.cpp
 
 ../obj/CQHeaderView.o: CQHeaderView.cpp CQHeaderView.h
