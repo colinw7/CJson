@@ -7,9 +7,12 @@ main(int argc, char **argv)
 
   std::string filename;
   std::string match;
-  bool        typeFlag = false;
-  bool        shortFlag = false;
-  bool        hierFlag = false;
+
+  bool typeFlag  = false;
+  bool shortFlag = false;
+  bool hierFlag  = false;
+  bool nameFlag  = false;
+  bool valueFlag = false;
 
   std::string hierName  = "children";
   std::string hierKey   = "name";
@@ -25,8 +28,14 @@ main(int argc, char **argv)
         json->setQuiet(true);
       else if (arg == "flat")
         json->setPrintFlat(true);
+      else if (arg == "csv")
+        json->setPrintCsv(true);
       else if (arg == "hier")
         hierFlag = true;
+      else if (arg == "name")
+        nameFlag = true;
+      else if (arg == "value")
+        valueFlag = true;
       else if (arg == "to_real")
         json->setStringToReal(true);
       else if (arg == "match")
@@ -54,7 +63,10 @@ main(int argc, char **argv)
           hierValue = argv[i];
       }
       else if (arg == "h" || arg == "help") {
-        std::cerr << "CJsonTest [-debug] [-quiet] [-flat] [-match <pattern>] <filename>\n";
+        std::cerr << "CJsonTest [-debug] [-quiet] [-flat] [-csv] [-match <pattern>] "
+                     "[-type] [-short] [-hier] [-name] [-value] "
+                     "[-hierName <name>] [-hierKey <key>] [hierValue <value>] "
+                     "<filename>\n";
         exit(0);
       }
       else
@@ -102,6 +114,10 @@ main(int argc, char **argv)
             std::cout << v->hierTypeName();
           else if (shortFlag)
             v->printShort(std::cout);
+          else if (nameFlag)
+            v->printName(std::cout);
+          else if (valueFlag)
+            v->printValue(std::cout);
           else
             v->print(std::cout);
 

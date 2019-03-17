@@ -1129,15 +1129,17 @@ print(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "{";
 
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat()) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
       if (! first) os << ",";
     }
     else {
-      if (! first) os << " ";
+      if (! first) os << sep;
     }
 
     os << "\"" << nv.first << "\":";
@@ -1147,7 +1149,7 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "}";
 }
 
@@ -1157,15 +1159,17 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "{";
 
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat()) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
       if (! first) os << ",";
     }
     else {
-      if (! first) os << " ";
+      if (! first) os << sep;
     }
 
     os << "\"" << nv.first << "\":";
@@ -1175,7 +1179,63 @@ printReal(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
+    os << "}";
+}
+
+void
+CJson::Object::
+printName(std::ostream &os) const
+{
+  bool first = true;
+
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
+    os << "{";
+
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
+  for (const auto &nv : nameValueArray_) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
+      if (! first) os << ",";
+    }
+    else {
+      if (! first) os << sep;
+    }
+
+    os << nv.first;
+
+    first = false;
+  }
+
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
+    os << "}";
+}
+
+void
+CJson::Object::
+printValue(std::ostream &os) const
+{
+  bool first = true;
+
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
+    os << "{";
+
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
+  for (const auto &nv : nameValueArray_) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
+      if (! first) os << ",";
+    }
+    else {
+      if (! first) os << sep;
+    }
+
+    nv.second->print(os);
+
+    first = false;
+  }
+
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "}";
 }
 
@@ -1211,15 +1271,17 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "[";
 
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
   for (const auto &v : values_) {
-    if (! json_->isPrintFlat()) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
       if (! first) os << ",";
     }
     else {
-      if (! first) os << " ";
+      if (! first) os << sep;
     }
 
     v->printReal(os);
@@ -1227,7 +1289,7 @@ printReal(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "]";
 }
 
@@ -1272,15 +1334,17 @@ print(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "[";
 
+  std::string sep = (json_->isPrintCsv() ? "," : " ");
+
   for (const auto &v : values_) {
-    if (! json_->isPrintFlat()) {
+    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
       if (! first) os << ",";
     }
     else {
-      if (! first) os << " ";
+      if (! first) os << sep;
     }
 
     v->print(os);
@@ -1288,6 +1352,6 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat())
+  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
     os << "]";
 }

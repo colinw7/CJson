@@ -101,9 +101,10 @@ class CJson {
 
     virtual void print(std::ostream &os=std::cout) const = 0;
 
-    virtual void printReal(std::ostream &os=std::cout) const { print(os); }
-
+    virtual void printReal (std::ostream &os=std::cout) const { print(os); }
     virtual void printShort(std::ostream &os=std::cout) const { print(os); }
+    virtual void printName (std::ostream &os=std::cout) const { print(os); }
+    virtual void printValue(std::ostream &os=std::cout) const { print(os); }
 
     friend std::ostream &operator<<(std::ostream &os, const Value &v) {
       v.print(os);
@@ -384,6 +385,10 @@ class CJson {
 
     void printReal(std::ostream &os=std::cout) const override;
 
+    void printName(std::ostream &os=std::cout) const override;
+
+    void printValue(std::ostream &os=std::cout) const override;
+
    private:
     NameValueMap   nameValueMap_;
     NameValueArray nameValueArray_;
@@ -476,6 +481,11 @@ class CJson {
 
   void setPrintFlat(bool b) { printFlat_ = b; }
   bool isPrintFlat() { return printFlat_; }
+
+  //---
+
+  void setPrintCsv(bool b) { printCsv_ = b; }
+  bool isPrintCsv() { return printCsv_; }
 
   //---
 
@@ -676,6 +686,7 @@ class CJson {
   bool debug_        { false };
   bool quiet_        { false };
   bool printFlat_    { false };
+  bool printCsv_     { false };
   bool stringToReal_ { false };
 };
 
