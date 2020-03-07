@@ -15,6 +15,9 @@ class CQJsonTable : public QTableView {
   void setModel(CQJsonModel *model);
 
  private:
+  using QTableView::setModel;
+
+ private:
   CQJsonModel*  model_  { nullptr };
   CQHeaderView* header_ { nullptr };
 };

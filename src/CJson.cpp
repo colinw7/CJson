@@ -90,9 +90,9 @@ readString(CStrParse &parse, std::string &str1)
             if (! parse.isXDigit())
               return false;
 
-            char c = parse.readChar();
+            char c1 = parse.readChar();
 
-            i = (i << 4) | (hexCharValue(c) & 0xF);
+            i = (i << 4) | (hexCharValue(c1) & 0xF);
           }
 
           CUtf8::append(str1, i);
@@ -689,11 +689,11 @@ matchValues(const ValueP &value, int ind, const std::string &match, Values &valu
   }
 
   if (match1 != "" && match1[0] != '{') {
-    auto p = match1.find("/");
+    auto p1 = match1.find("/");
 
-    while (p != std::string::npos) {
-      std::string lhs = match1.substr(0, p);
-      std::string rhs = match1.substr(p + 1);
+    while (p1 != std::string::npos) {
+      std::string lhs = match1.substr(0, p1);
+      std::string rhs = match1.substr(p1 + 1);
 
       if (lhs == "")
         return false;
@@ -715,7 +715,7 @@ matchValues(const ValueP &value, int ind, const std::string &match, Values &valu
 
       match1 = rhs;
 
-      p = match1.find("/");
+      p1 = match1.find("/");
     }
   }
 
