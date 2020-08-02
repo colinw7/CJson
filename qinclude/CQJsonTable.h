@@ -12,10 +12,7 @@ class CQJsonTable : public QTableView {
  public:
   CQJsonTable(QWidget *parent=nullptr);
 
-  void setModel(CQJsonModel *model);
-
- private:
-  using QTableView::setModel;
+  void setModel(QAbstractItemModel *model) override;
 
  private:
   CQJsonModel*  model_  { nullptr };

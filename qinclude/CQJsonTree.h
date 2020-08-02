@@ -11,7 +11,7 @@ class CQJsonTree : public CQTreeView {
  public:
   CQJsonTree(QWidget *parent=nullptr);
 
-  void setModel(CQJsonModel *model);
+  void setJsonModel(CQJsonModel *model);
 
  private:
   CQJsonModel* model_ { nullptr };

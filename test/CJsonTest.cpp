@@ -9,7 +9,6 @@ main(int argc, char **argv)
   std::string match;
 
   bool typeFlag  = false;
-  bool shortFlag = false;
   bool hierFlag  = false;
   bool nameFlag  = false;
   bool valueFlag = false;
@@ -22,28 +21,17 @@ main(int argc, char **argv)
     if (argv[i][0] == '-') {
       std::string arg(&argv[i][1]);
 
-      if      (arg == "debug")
-        json->setDebug(true);
-      else if (arg == "quiet")
-        json->setQuiet(true);
-      else if (arg == "flat")
-        json->setPrintFlat(true);
-      else if (arg == "csv")
-        json->setPrintCsv(true);
-      else if (arg == "hier")
-        hierFlag = true;
-      else if (arg == "name")
-        nameFlag = true;
-      else if (arg == "value")
-        valueFlag = true;
-      else if (arg == "to_real")
-        json->setStringToReal(true);
-      else if (arg == "match")
-        match = argv[++i];
-      else if (arg == "type")
-        typeFlag = true;
-      else if (arg == "short")
-        shortFlag = true;
+      if      (arg == "debug"   ) json->setDebug(true);
+      else if (arg == "quiet"   ) json->setQuiet(true);
+      else if (arg == "flat"    ) json->setPrintFlat(true);
+      else if (arg == "csv"     ) json->setPrintCsv(true);
+      else if (arg == "hier"    ) hierFlag = true;
+      else if (arg == "name"    ) nameFlag = true;
+      else if (arg == "value"   ) valueFlag = true;
+      else if (arg == "to_real" ) json->setStringToReal(true);
+      else if (arg == "match"   ) match = argv[++i];
+      else if (arg == "type"    ) typeFlag = true;
+      else if (arg == "short"   ) json->setPrintShort(true);
       else if (arg == "hierName") {
         ++i;
 
@@ -69,6 +57,8 @@ main(int argc, char **argv)
                      "<filename>\n";
         exit(0);
       }
+      else if (arg == "")
+        filename = "-";
       else
         std::cerr << "Unhandled option: " << arg << "\n";
     }
@@ -112,7 +102,7 @@ main(int argc, char **argv)
         for (const auto &v : values) {
           if      (typeFlag)
             std::cout << v->hierTypeName();
-          else if (shortFlag)
+          else if (json->isPrintShort())
             v->printShort(std::cout);
           else if (nameFlag)
             v->printName(std::cout);

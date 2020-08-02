@@ -400,7 +400,13 @@ loadFile(const std::string &filename, ValueP &value)
 {
   value = ValueP();
 
-  FILE *fp = fopen(filename.c_str(), "r");
+  FILE *fp = nullptr;
+
+  if (filename == "-")
+    fp = stdin;
+  else
+    fp = fopen(filename.c_str(), "r");
+
   if (! fp) return false;
 
   std::string lines;
@@ -1144,7 +1150,10 @@ print(std::ostream &os) const
 
     os << "\"" << nv.first << "\":";
 
-    nv.second->print(os);
+    if (json_->isPrintShort())
+      nv.second->printShort(os);
+    else
+      nv.second->print(os);
 
     first = false;
   }
@@ -1230,7 +1239,10 @@ printValue(std::ostream &os) const
       if (! first) os << sep;
     }
 
-    nv.second->print(os);
+    if (json_->isPrintShort())
+      nv.second->printShort(os);
+    else
+      nv.second->print(os);
 
     first = false;
   }
@@ -1347,7 +1359,10 @@ print(std::ostream &os) const
       if (! first) os << sep;
     }
 
-    v->print(os);
+    if (json_->isPrintShort())
+      v->printShort(os);
+    else
+      v->print(os);
 
     first = false;
   }

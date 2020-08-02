@@ -479,13 +479,18 @@ class CJson {
 
   //---
 
-  void setPrintFlat(bool b) { printFlat_ = b; }
-  bool isPrintFlat() { return printFlat_; }
+  void setPrintFlat(bool b) { printData_.isFlat = b; }
+  bool isPrintFlat() { return printData_.isFlat; }
 
   //---
 
-  void setPrintCsv(bool b) { printCsv_ = b; }
-  bool isPrintCsv() { return printCsv_; }
+  void setPrintCsv(bool b) { printData_.isCsv = b; }
+  bool isPrintCsv() { return printData_.isCsv; }
+
+  //---
+
+  void setPrintShort(bool b) { printData_.isShort = b; }
+  bool isPrintShort() { return printData_.isShort; }
 
   //---
 
@@ -682,12 +687,17 @@ class CJson {
   //------
 
  private:
-  bool strict_       { false };
-  bool debug_        { false };
-  bool quiet_        { false };
-  bool printFlat_    { false };
-  bool printCsv_     { false };
-  bool stringToReal_ { false };
+  struct PrintData {
+    bool isFlat  { false };
+    bool isCsv   { false };
+    bool isShort { false };
+  };
+
+  bool      strict_       { false };
+  bool      debug_        { false };
+  bool      quiet_        { false };
+  PrintData printData_    { false };
+  bool      stringToReal_ { false };
 };
 
 #endif

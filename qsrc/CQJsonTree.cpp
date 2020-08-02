@@ -10,7 +10,7 @@ CQJsonTree(QWidget *parent) :
 
 void
 CQJsonTree::
-setModel(CQJsonModel *model)
+setJsonModel(CQJsonModel *model)
 {
   model->setFlat(false);
 

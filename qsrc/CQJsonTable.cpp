@@ -17,9 +17,12 @@ CQJsonTable(QWidget *parent) :
 
 void
 CQJsonTable::
-setModel(CQJsonModel *model)
+setModel(QAbstractItemModel *model)
 {
-  model->setFlat(true);
+  auto *jsonModel = qobject_cast<CQJsonModel *>(model);
+
+  if (jsonModel)
+    jsonModel->setFlat(true);
 
   QTableView::setModel(model);
 }
