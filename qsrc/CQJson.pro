@@ -31,4 +31,5 @@ DESTDIR = ../lib
 INCLUDEPATH += \
 ../qinclude \
 ../include \
+../../CQUtil/include \
 ../../CUtil/include \
