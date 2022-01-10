@@ -908,7 +908,7 @@ CJson::String *
 CJson::
 createString(const std::string &str)
 {
-  String *jstr = new String(this, str);
+  auto *jstr = new String(this, str);
 
   return jstr;
 }
@@ -917,7 +917,7 @@ CJson::Number *
 CJson::
 createNumber(double r)
 {
-  Number *jnumber = new Number(this, r);
+  auto *jnumber = new Number(this, r);
 
   return jnumber;
 }
@@ -926,7 +926,7 @@ CJson::True *
 CJson::
 createTrue()
 {
-  True *jtrue = new True(this);
+  auto *jtrue = new True(this);
 
   return jtrue;
 }
@@ -935,7 +935,7 @@ CJson::False *
 CJson::
 createFalse()
 {
-  False *jfalse = new False(this);
+  auto *jfalse = new False(this);
 
   return jfalse;
 }
@@ -944,7 +944,7 @@ CJson::Null *
 CJson::
 createNull()
 {
-  Null *jnull = new Null(this);
+  auto *jnull = new Null(this);
 
   return jnull;
 }
@@ -953,7 +953,7 @@ CJson::Object *
 CJson::
 createObject()
 {
-  Object *jobj = new Object(this);
+  auto *jobj = new Object(this);
 
   return jobj;
 }
@@ -962,7 +962,7 @@ CJson::Array *
 CJson::
 createArray()
 {
-  Array *jarray = new Array(this);
+  auto *jarray = new Array(this);
 
   return jarray;
 }

@@ -27,14 +27,14 @@ class CJson {
     VALUE_ARRAY
   };
 
-  typedef boost::optional<std::string> OptString;
+  using OptString = boost::optional<std::string>;
 
   //---
 
   // Json Value base class
   class Value;
 
-  typedef std::shared_ptr<Value> ValueP;
+  using ValueP = std::shared_ptr<Value>;
 
   class Value {
    public:
@@ -60,6 +60,16 @@ class CJson {
     bool isArray () const { return type_ == ValueType::VALUE_ARRAY ; }
 
     bool isComposite() const { return isObject() || isArray(); }
+
+    //---
+
+    bool isBool() const { return isTrue() || isFalse(); }
+
+    bool toBool() const {
+      if (isTrue ()) return true;
+      if (isFalse()) return false;
+      assert(false); return false;
+    }
 
     //---
 
@@ -118,7 +128,7 @@ class CJson {
     ValueType type_   { ValueType::VALUE_NONE };
   };
 
-  typedef std::vector<ValueP> Values;
+  using Values = std::vector<ValueP>;
 
   //---
 
@@ -267,9 +277,9 @@ class CJson {
   // Json Object (name/value map)
   class Object : public Value {
    public:
-    typedef std::map<std::string,ValueP>  NameValueMap;
-    typedef std::pair<std::string,ValueP> NameValue;
-    typedef std::vector<NameValue>        NameValueArray;
+    using NameValueMap   = std::map<std::string, ValueP>;
+    using NameValue      = std::pair<std::string, ValueP>;
+    using NameValueArray = std::vector<NameValue>;
 
    public:
     Object(CJson *json) :
@@ -305,6 +315,8 @@ class CJson {
 
       if (p == nameValueMap_.end())
         p = nameValueMap_.insert(p, NameValueMap::value_type(name, value));
+      else
+        (*p).second = value;
 
       nameValueArray_.emplace_back(name, value);
     }
@@ -586,17 +598,17 @@ class CJson {
  private:
   template<typename Tag, typename T>
   struct TypeMap {
-    typedef CJson::Null Type;
+    using Type = CJson::Null;
   };
 
   template<typename Tag>
   struct TypeMap<Tag, std::string> {
-    typedef CJson::String Type;
+    using Type = CJson::String;
   };
 
   template<typename Tag>
   struct TypeMap<Tag, double> {
-    typedef CJson::Number Type;
+    using Type = CJson::Number;
   };
 
   //---
@@ -645,7 +657,7 @@ class CJson {
       }
     }
     else {
-      typedef typename TypeMap<void,T>::Type Type;
+      using Type = typename TypeMap<void,T>::Type;
 
       Type *v;
 

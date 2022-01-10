@@ -3,7 +3,7 @@
 int
 main(int argc, char **argv)
 {
-  CJson *json = new CJson;
+  auto *json = new CJson;
 
   std::string filename;
   std::string match;
@@ -19,7 +19,7 @@ main(int argc, char **argv)
 
   for (auto i = 1; i < argc; ++i) {
     if (argv[i][0] == '-') {
-      std::string arg(&argv[i][1]);
+      auto arg = std::string(&argv[i][1]);
 
       if      (arg == "debug"   ) json->setDebug(true);
       else if (arg == "quiet"   ) json->setQuiet(true);
@@ -120,9 +120,9 @@ main(int argc, char **argv)
     std::cout << value->hierTypeName() << "\n";
   }
   else {
-    typedef std::pair<std::string,std::string>   NameValue;
-    typedef std::vector<NameValue>               NameValueArray;
-    typedef std::map<std::string,NameValueArray> PackageNameValueArray;
+    using NameValue             = std::pair<std::string,std::string>;
+    using NameValueArray        = std::vector<NameValue>;
+    using PackageNameValueArray = std::map<std::string,NameValueArray>;
 
     std::string           package;
     PackageNameValueArray packageNameValues;
@@ -131,7 +131,7 @@ main(int argc, char **argv)
                                &hierKey, &hierValue]
      (const CJson::OptString & /*name*/, const CJson::ValueP v, int /*depth*/) {
       if (v->isObject()) {
-        const CJson::Object *obj = v->cast<CJson::Object>();
+        const auto *obj = v->cast<CJson::Object>();
 
         if (obj->hasName(hierName)) {
           CJson::ValueP nameValue;
@@ -149,12 +149,12 @@ main(int argc, char **argv)
                 parent = parent->parent();
 
               while (parent && parent->isObject()) {
-                const CJson::Object *pobj = parent->cast<CJson::Object>();
+                const auto *pobj = parent->cast<CJson::Object>();
 
                 CJson::ValueP keyValue;
 
                 if (pobj->getNamedValue(hierKey, keyValue) && keyValue->isString()) {
-                  const CJson::String *keyStr = keyValue->cast<CJson::String>();
+                  const auto *keyStr = keyValue->cast<CJson::String>();
 
                   package = keyStr->value() + "/" + package;
                 }
@@ -181,17 +181,17 @@ main(int argc, char **argv)
         if (! keyValue->isString())
           return false;
 
-        const CJson::String *keyStr = keyValue->cast<CJson::String>();
+        const auto *keyStr = keyValue->cast<CJson::String>();
 
         if      (valueValue->isNumber()) {
-          const CJson::Number *valueNum = valueValue->cast<CJson::Number>();
+          const auto *valueNum = valueValue->cast<CJson::Number>();
 
           NameValue nv(keyStr->value(), std::to_string(valueNum->value()));
 
           packageNameValues[package].push_back(nv);
         }
         else if (valueValue->isString()) {
-          const CJson::String *valueStr = valueValue->cast<CJson::String>();
+          const auto *valueStr = valueValue->cast<CJson::String>();
 
           NameValue nv(keyStr->value(), valueStr->value());
 
