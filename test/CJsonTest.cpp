@@ -25,6 +25,7 @@ main(int argc, char **argv)
       else if (arg == "quiet"   ) json->setQuiet(true);
       else if (arg == "flat"    ) json->setPrintFlat(true);
       else if (arg == "csv"     ) json->setPrintCsv(true);
+      else if (arg == "html"    ) json->setPrintHtml(true);
       else if (arg == "hier"    ) hierFlag = true;
       else if (arg == "name"    ) nameFlag = true;
       else if (arg == "value"   ) valueFlag = true;

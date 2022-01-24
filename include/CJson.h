@@ -477,37 +477,42 @@ class CJson {
   //---
 
   void setStrict(bool b) { strict_ = b; }
-  bool isStrict() { return strict_; }
+  bool isStrict() const { return strict_; }
 
   //---
 
   void setDebug(bool b) { debug_ = b; }
-  bool isDebug() { return debug_; }
+  bool isDebug() const { return debug_; }
 
   //---
 
   void setQuiet(bool b) { quiet_ = b; }
-  bool isQuiet() { return quiet_; }
+  bool isQuiet() const { return quiet_; }
 
   //---
 
   void setPrintFlat(bool b) { printData_.isFlat = b; }
-  bool isPrintFlat() { return printData_.isFlat; }
+  bool isPrintFlat() const { return printData_.isFlat; }
 
   //---
 
   void setPrintCsv(bool b) { printData_.isCsv = b; }
-  bool isPrintCsv() { return printData_.isCsv; }
+  bool isPrintCsv() const { return printData_.isCsv; }
+
+  //---
+
+  void setPrintHtml(bool b) { printData_.isHtml = b; }
+  bool isPrintHtml() const { return printData_.isHtml; }
 
   //---
 
   void setPrintShort(bool b) { printData_.isShort = b; }
-  bool isPrintShort() { return printData_.isShort; }
+  bool isPrintShort() const { return printData_.isShort; }
 
   //---
 
   void setStringToReal(bool b) { stringToReal_ = b; }
-  bool isStringToReal() { return stringToReal_; }
+  bool isStringToReal() const { return stringToReal_; }
 
   //---
 
@@ -698,10 +703,15 @@ class CJson {
 
   //------
 
+  std::string printSep() const;
+  std::string printPrefix(bool isArray=false) const;
+  std::string printPostfix(bool isArray=false) const;
+
  private:
   struct PrintData {
     bool isFlat  { false };
     bool isCsv   { false };
+    bool isHtml  { false };
     bool isShort { false };
   };
 

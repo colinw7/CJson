@@ -967,6 +967,41 @@ createArray()
   return jarray;
 }
 
+//---
+
+std::string
+CJson::
+printSep() const
+{
+  if (isPrintCsv ()) return ",";
+  if (isPrintHtml()) return "<td></td>";
+  if (isPrintFlat()) return " ";
+
+  return " ";
+}
+
+std::string
+CJson::
+printPrefix(bool isArray) const
+{
+  if (isPrintCsv ()) return "";
+  if (isPrintHtml()) return "<td>";
+  if (isPrintFlat()) return "";
+
+  return (isArray ? "[" : "{");
+}
+
+std::string
+CJson::
+printPostfix(bool isArray) const
+{
+  if (isPrintCsv ()) return "";
+  if (isPrintHtml()) return "</td>";
+  if (isPrintFlat()) return "";
+
+  return (isArray ? "]" : "}");
+}
+
 //------
 
 bool
@@ -984,7 +1019,12 @@ void
 CJson::String::
 print(std::ostream &os) const
 {
-  os << "\"" << str_ << "\"";
+  if (json_->isPrintHtml()) {
+    // TODO: encode html
+    os << str_;
+  }
+  else
+    os << "\"" << str_ << "\"";
 }
 
 void
@@ -1021,7 +1061,10 @@ void
 CJson::True::
 print(std::ostream &os) const
 {
-  os << "\"true\"";
+  if (json_->isPrintHtml())
+    os << "true";
+  else
+    os << "\"true\"";
 }
 
 //------
@@ -1030,7 +1073,10 @@ void
 CJson::False::
 print(std::ostream &os) const
 {
-  os << "\"false\"";
+  if (json_->isPrintHtml())
+    os << "false";
+  else
+    os << "\"false\"";
 }
 
 //------
@@ -1039,7 +1085,10 @@ void
 CJson::Null::
 print(std::ostream &os) const
 {
-  os << "\"null\"";
+  if (json_->isPrintHtml())
+    os << "null";
+  else
+    os << "\"null\"";
 }
 
 //------
@@ -1135,20 +1184,17 @@ print(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "{";
+  os << json_->printPrefix();
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
-    os << "\"" << nv.first << "\":";
+    if (! json_->isPrintHtml())
+      os << "\"" << nv.first << "\":";
+    else
+      os << nv.first;
 
     if (json_->isPrintShort())
       nv.second->printShort(os);
@@ -1158,8 +1204,7 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "}";
+  os << json_->printPostfix();
 }
 
 void
@@ -1168,18 +1213,12 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "{";
+  os << json_->printPrefix();
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
     os << "\"" << nv.first << "\":";
 
@@ -1188,8 +1227,7 @@ printReal(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "}";
+  os << json_->printPostfix();
 }
 
 void
@@ -1198,26 +1236,19 @@ printName(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "{";
+  os << json_->printPrefix();
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
     os << nv.first;
 
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "}";
+  os << json_->printPostfix();
 }
 
 void
@@ -1226,18 +1257,12 @@ printValue(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "{";
+  os << json_->printPrefix();
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &nv : nameValueArray_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
     if (json_->isPrintShort())
       nv.second->printShort(os);
@@ -1247,8 +1272,7 @@ printValue(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "}";
+  os << json_->printPostfix();
 }
 
 //------
@@ -1283,26 +1307,19 @@ printReal(std::ostream &os) const
 {
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "[";
+  os << json_->printPrefix(/*isArray*/true);
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &v : values_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
     v->printReal(os);
 
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "]";
+  os << json_->printPostfix(/*isArray*/true);
 }
 
 //------
@@ -1344,20 +1361,20 @@ void
 CJson::Array::
 print(std::ostream &os) const
 {
+  // just print child array if flat and single array child
+  if (json_->isPrintFlat() && values_.size() == 1 && values_[0]->isArray()) {
+    values_[0]->print(os);
+    return;
+  }
+
   bool first = true;
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "[";
+  os << json_->printPrefix(/*isArray*/true);
 
-  std::string sep = (json_->isPrintCsv() ? "," : " ");
+  auto sep = json_->printSep();
 
   for (const auto &v : values_) {
-    if (! json_->isPrintFlat() && ! json_->isPrintCsv()) {
-      if (! first) os << ",";
-    }
-    else {
-      if (! first) os << sep;
-    }
+    if (! first) os << sep;
 
     if (json_->isPrintShort())
       v->printShort(os);
@@ -1367,6 +1384,5 @@ print(std::ostream &os) const
     first = false;
   }
 
-  if (! json_->isPrintFlat() && ! json_->isPrintCsv())
-    os << "]";
+  os << json_->printPostfix(/*isArray*/true);
 }
