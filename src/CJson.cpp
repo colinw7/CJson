@@ -974,7 +974,7 @@ CJson::
 printSep() const
 {
   if (isPrintCsv ()) return ",";
-  if (isPrintHtml()) return "<td></td>";
+  if (isPrintHtml()) return "</td><td>";
   if (isPrintFlat()) return " ";
 
   return " ";
