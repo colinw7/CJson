@@ -367,7 +367,7 @@ class CJson {
 
     //---
 
-    uint numValues() const override { return nameValueArray_.size(); }
+    uint numValues() const override { return uint(nameValueArray_.size()); }
 
     std::string indexKey(uint i) override {
       assert(i < numValues());
@@ -425,7 +425,7 @@ class CJson {
       values_.push_back(value);
     }
 
-    uint size() const { return values_.size(); }
+    uint size() const { return uint(values_.size()); }
 
     ValueP at(uint i) const { return values_[i]; }
 
@@ -702,6 +702,8 @@ class CJson {
   Array*  createArray();
 
   //------
+
+  bool errorMsg(const CStrParse &parse, const std::string &msg) const;
 
   std::string printSep() const;
   std::string printPrefix(bool isArray=false) const;

@@ -47,7 +47,7 @@ stol(const std::string &str, bool &ok)
 {
   char *p;
 
-  int i = strtol(str.c_str(), &p, 10);
+  long i = strtol(str.c_str(), &p, 10);
 
   while (*p && isspace(*p))
     ++p;
@@ -62,8 +62,10 @@ bool
 CJson::
 readString(CStrParse &parse, std::string &str1)
 {
+  // TODO: allow single quotes ?
+
   if (! parse.isChar('\"'))
-    return false;
+    return errorMsg(parse, "Missing double quote for string");
 
   parse.skipChar();
 
@@ -88,20 +90,20 @@ readString(CStrParse &parse, std::string &str1)
 
           for (int j = 0; j < 4; ++j) {
             if (! parse.isXDigit())
-              return false;
+              return errorMsg(parse, "Bad hex digit");
 
             char c1 = parse.readChar();
 
             i = (i << 4) | (hexCharValue(c1) & 0xF);
           }
 
-          CUtf8::append(str1, i);
+          CUtf8::append(str1, ulong(i));
 
           break;
         }
         default: {
           if (isStrict())
-            return false;
+            return errorMsg(parse, "Bad char in string");
 
           str1 += c;
 
@@ -116,7 +118,7 @@ readString(CStrParse &parse, std::string &str1)
   }
 
   if (parse.eof() || ! parse.isChar('\"'))
-    return false;
+    return errorMsg(parse, "Missing close double quote for string");
 
   parse.skipChar();
 
@@ -129,7 +131,7 @@ CJson::
 readNumber(CStrParse &parse, std::string &str1)
 {
   if (parse.eof())
-    return false;
+    return errorMsg(parse, "Invalid number");
 
   if (parse.isChar('-'))
     str1 += parse.readChar();
@@ -142,14 +144,14 @@ readNumber(CStrParse &parse, std::string &str1)
       str1 += parse.readChar();
   }
   else
-    return false;
+    return errorMsg(parse, "Invalid number char");
 
   if (parse.isChar('.')) {
     str1 += parse.readChar();
 
     if (isStrict()) {
       if (! parse.isDigit())
-        return false;
+        return errorMsg(parse, "Invalid number char");
     }
 
     while (parse.isDigit())
@@ -164,7 +166,7 @@ readNumber(CStrParse &parse, std::string &str1)
       str1 += parse.readChar();
 
     if (! parse.isDigit())
-      return false;
+      return errorMsg(parse, "Invalid number char");
 
     while (parse.isDigit())
       str1 += parse.readChar();
@@ -179,7 +181,7 @@ CJson::
 readObject(CStrParse &parse, Object *&obj)
 {
   if (! parse.isChar('{'))
-    return false;
+    return errorMsg(parse, "Missing open brace for object");
 
   bool open = false;
 
@@ -204,7 +206,7 @@ readObject(CStrParse &parse, Object *&obj)
 
     if (! parse.isChar(':')) {
       delete obj;
-      return false;
+      return errorMsg(parse, "Missing color separator for object");
     }
 
     parse.skipChar();
@@ -236,12 +238,12 @@ readObject(CStrParse &parse, Object *&obj)
 
   if (open) {
     delete obj;
-    return false;
+    return errorMsg(parse, "Missing data after comma for object");
   }
 
   if (! parse.isChar('}')) {
     delete obj;
-    return false;
+    return errorMsg(parse, "Missing close brace for object");
   }
 
   parse.skipChar();
@@ -255,7 +257,7 @@ CJson::
 readArray(CStrParse &parse, Array *&array)
 {
   if (! parse.isChar('['))
-    return false;
+    return errorMsg(parse, "Missing open square bracket for array");
 
   bool open = false;
 
@@ -294,12 +296,12 @@ readArray(CStrParse &parse, Array *&array)
 
   if (open) {
     delete array;
-    return false;
+    return errorMsg(parse, "Missing value after command for array");
   }
 
   if (! parse.isChar(']')) {
     delete array;
-    return false;
+    return errorMsg(parse, "Missing close square bracket for array");
   }
 
   parse.skipChar();
@@ -313,7 +315,7 @@ CJson::
 readValue(CStrParse &parse, ValueP &value)
 {
   if (parse.eof())
-    return false;
+    return errorMsg(parse, "Invald char for value");
 
   char c = parse.getCharAt();
 
@@ -369,7 +371,7 @@ readValue(CStrParse &parse, ValueP &value)
     value = ValueP(createNull());
   }
   else
-    return false;
+    return errorMsg(parse, "Invald char for value");
 
   return true;
 }
@@ -382,10 +384,10 @@ readLine(FILE *fp, std::string &line)
 
   if (feof(fp)) return false;
 
-  char c = fgetc(fp);
+  int c = fgetc(fp);
 
   while (! feof(fp) && c != '\n') {
-    line += c;
+    line += char(c);
 
     c = fgetc(fp);
   }
@@ -407,7 +409,11 @@ loadFile(const std::string &filename, ValueP &value)
   else
     fp = fopen(filename.c_str(), "r");
 
-  if (! fp) return false;
+  if (! fp) {
+    if (! isQuiet())
+      std::cerr << "Failed to open file " << filename << "\n";
+    return false;
+  }
 
   std::string lines;
 
@@ -463,7 +469,7 @@ loadString(const std::string &lines, ValueP &value)
   parse.skipSpace();
 
   if (! parse.eof())
-    return false;
+    return errorMsg(parse, "Extra characters for string");
 
   return true;
 }
@@ -566,8 +572,8 @@ matchArray(const ValueP &value, const std::string &lhs, const std::string &rhs, 
 
     bool ok1, ok2;
 
-    int i1 = CJson::stol(lhs1, ok1);
-    int i2 = CJson::stol(rhs1, ok2);
+    long i1 = CJson::stol(lhs1, ok1);
+    long i2 = CJson::stol(rhs1, ok2);
 
     if (! ok1 || ! ok2) {
       if (! isQuiet())
@@ -575,11 +581,11 @@ matchArray(const ValueP &value, const std::string &lhs, const std::string &rhs, 
       return false;
     }
 
-    for (int i = i1; i <= i2 && i < int(array->size()); ++i) {
-      ValueP value1 = array->at(i);
+    for (long i = i1; i <= i2 && i < long(array->size()); ++i) {
+      ValueP value1 = array->at(uint(i));
 
       if (rhs1 != "")
-        matchValues(value1, i, rhs1, values);
+        matchValues(value1, int(i), rhs1, values);
       else
         values.push_back(value1);
     }
@@ -587,7 +593,7 @@ matchArray(const ValueP &value, const std::string &lhs, const std::string &rhs, 
   else if (range != "") {
     bool ok;
 
-    int i1 = CJson::stol(range, ok);
+    long i1 = CJson::stol(range, ok);
 
     if (! ok) {
       if (! isQuiet())
@@ -735,7 +741,7 @@ matchValues(const ValueP &value, int ind, const std::string &match, Values &valu
     return matchList(value1, ind, match1, "", values);
   }
   else if (match1[0] == '#') {
-    int base = 0;
+    long base = 0;
 
     if (match1.size() > 1) {
       bool ok;
@@ -743,7 +749,7 @@ matchValues(const ValueP &value, int ind, const std::string &match, Values &valu
       base = CJson::stol(match1.substr(1), ok);
     }
 
-    Number *n = createNumber(base + ind);
+    Number *n = createNumber(double(base + ind));
 
     values.push_back(ValueP(n));
   }
@@ -965,6 +971,18 @@ createArray()
   auto *jarray = new Array(this);
 
   return jarray;
+}
+
+//---
+
+bool
+CJson::
+errorMsg(const CStrParse &parse, const std::string &msg) const
+{
+  if (! isQuiet())
+    std::cerr << "Error: " << msg << " (char " << parse.getPos() << ")\n";
+
+  return false;
 }
 
 //---
