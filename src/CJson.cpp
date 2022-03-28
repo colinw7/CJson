@@ -62,10 +62,19 @@ bool
 CJson::
 readString(CStrParse &parse, std::string &str1)
 {
-  // TODO: allow single quotes ?
+  char startChar = '\"';
 
-  if (! parse.isChar('\"'))
-    return errorMsg(parse, "Missing double quote for string");
+  if (isAllowSingleQuote()) {
+    if (! parse.isChar('\"') && ! parse.isChar('\''))
+      return errorMsg(parse, "Missing open quote for string");
+
+    if (parse.isChar('\''))
+      startChar = '\'';
+  }
+  else {
+    if (! parse.isChar('\"'))
+      return errorMsg(parse, "Missing double quote for string");
+  }
 
   parse.skipChar();
 
@@ -111,14 +120,14 @@ readString(CStrParse &parse, std::string &str1)
         }
       }
     }
-    else if (parse.isChar('\"'))
+    else if (parse.isChar(startChar))
       break;
     else
       str1 += parse.readChar();
   }
 
-  if (parse.eof() || ! parse.isChar('\"'))
-    return errorMsg(parse, "Missing close double quote for string");
+  if (parse.eof() || ! parse.isChar(startChar))
+    return errorMsg(parse, "Missing close quote for string");
 
   parse.skipChar();
 
@@ -319,7 +328,7 @@ readValue(CStrParse &parse, ValueP &value)
 
   char c = parse.getCharAt();
 
-  if      (c == '\"') {
+  if      (c == '\"' || (c == '\'' && isAllowSingleQuote())) {
     std::string str1;
 
     if (! readString(parse, str1))

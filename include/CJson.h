@@ -481,6 +481,11 @@ class CJson {
 
   //---
 
+  bool isAllowSingleQuote() const { return allowSingleQuote_; }
+  void setAllowSingleQuote(bool b) { allowSingleQuote_ = b; }
+
+  //---
+
   void setDebug(bool b) { debug_ = b; }
   bool isDebug() const { return debug_; }
 
@@ -717,11 +722,12 @@ class CJson {
     bool isShort { false };
   };
 
-  bool      strict_       { false };
-  bool      debug_        { false };
-  bool      quiet_        { false };
-  PrintData printData_    { false };
-  bool      stringToReal_ { false };
+  bool      strict_           { false };
+  bool      allowSingleQuote_ { false};
+  bool      debug_            { false };
+  bool      quiet_            { false };
+  PrintData printData_        { false };
+  bool      stringToReal_     { false };
 };
 
 #endif
