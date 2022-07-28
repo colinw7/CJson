@@ -8,7 +8,7 @@
 #include <memory>
 #include <map>
 
-#include <boost/optional.hpp>
+#include <optional>
 
 class CStrParse;
 
@@ -27,7 +27,7 @@ class CJson {
     VALUE_ARRAY
   };
 
-  using OptString = boost::optional<std::string>;
+  using OptString = std::optional<std::string>;
 
   //---
 
