@@ -28,6 +28,7 @@ class CJson {
   };
 
   using OptString = std::optional<std::string>;
+  using Names     = std::vector<std::string>;
 
   //---
 
@@ -280,6 +281,7 @@ class CJson {
     using NameValueMap   = std::map<std::string, ValueP>;
     using NameValue      = std::pair<std::string, ValueP>;
     using NameValueArray = std::vector<NameValue>;
+    using Names          = std::vector<std::string>;
 
    public:
     Object(CJson *json) :
@@ -294,12 +296,18 @@ class CJson {
 
     const NameValueArray &nameValueArray() const { return nameValueArray_; }
 
-    void getNames(std::vector<std::string> &names) {
+    void getNames(Names &names) const {
       for (const auto &nv : nameValueArray_)
         names.push_back(nv.first);
     }
 
-    void getValues(Values &values) {
+    Names getNames() const {
+      Names names;
+      getNames(names);
+      return names;
+    }
+
+    void getValues(Values &values) const {
       for (const auto &nv : nameValueArray_)
         values.push_back(nv.second);
     }
@@ -332,6 +340,12 @@ class CJson {
       return true;
     }
 
+    ValueP getNamedValue(const std::string &name) const {
+      ValueP value;
+      assert(getNamedValue(name, value));
+      return value;
+    }
+
     template<typename T>
     bool getNamedValueT(const std::string &name, T *&t) const {
       ValueP value;
@@ -345,6 +359,13 @@ class CJson {
         return false;
 
       return true;
+    }
+
+    template<typename T>
+    T *getNamedValueT(const std::string &name) const {
+      T *t { nullptr };
+      assert(getNamedValueT(name, t));
+      return t;
     }
 
     bool indexNameValue(uint i, std::string &name, ValueP &value) const {
@@ -692,7 +713,7 @@ class CJson {
   bool matchHier(const ValueP &value, int ind, const std::string &lhs, const std::string &rhs,
                  Values &values);
   bool matchHier1(const ValueP &value, int ind, const std::string &lhs, const std::string &rhs,
-                  const std::vector<std::string> &keys, Values &ivalues, Values &values);
+                  const Names &keys, Values &ivalues, Values &values);
 
   String *hierValuesToKey(const Values &values, const Values &kvalues);
 
