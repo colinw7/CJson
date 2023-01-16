@@ -548,7 +548,7 @@ class CJson {
   // load file and return typed root value
   template<typename T>
   bool loadFileT(const std::string &filename, T *&value) {
-    ValueP value1;
+    static ValueP value1;
 
     if (! loadFile(filename.c_str(), value1))
       return false;
