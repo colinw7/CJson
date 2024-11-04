@@ -32,6 +32,21 @@ class CJson {
 
   //---
 
+  static const char *typeName(ValueType type) {
+    switch (type) {
+      case ValueType::VALUE_STRING: return "string";
+      case ValueType::VALUE_NUMBER: return "number";
+      case ValueType::VALUE_TRUE  : return "true";
+      case ValueType::VALUE_FALSE : return "false";
+      case ValueType::VALUE_NULL  : return "null";
+      case ValueType::VALUE_OBJECT: return "object";
+      case ValueType::VALUE_ARRAY : return "array";
+      default                     : return "none";
+    }
+  }
+
+  //---
+
   // Json Value base class
   class Value;
 
@@ -562,7 +577,7 @@ class CJson {
   }
 
   // load string and return root value
-  bool loadString(const std::string &filename, ValueP &value);
+  bool loadString(const std::string &lines, ValueP &value);
 
   //---
 
