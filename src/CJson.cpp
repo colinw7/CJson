@@ -324,7 +324,7 @@ CJson::
 readValue(CStrParse &parse, ValueP &value)
 {
   if (parse.eof())
-    return errorMsg(parse, "Invald char for value");
+    return errorMsg(parse, "Invalid char for value");
 
   char c = parse.getCharAt();
 
@@ -380,7 +380,7 @@ readValue(CStrParse &parse, ValueP &value)
     value = ValueP(createNull());
   }
   else
-    return errorMsg(parse, "Invald char for value");
+    return errorMsg(parse, "Invalid char for value");
 
   return true;
 }
