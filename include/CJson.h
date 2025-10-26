@@ -89,6 +89,20 @@ class CJson {
 
     //---
 
+    double toNumber() const {
+      assert(isNumber());
+      auto *num = cast<CJson::Number>();
+      return num->value();
+    }
+
+    std::string toString() const {
+      assert(isString());
+      auto *str = cast<CJson::String>();
+      return str->value();
+    }
+
+    //---
+
     virtual uint numValues() const { return 1; }
 
     virtual std::string indexKey(uint i) { assert(i == 0); return ""; }
@@ -122,6 +136,13 @@ class CJson {
     //---
 
     virtual std::string to_string() const = 0;
+    virtual std::string to_name  () const { return to_string(); }
+
+    std::string hier_name() const;
+
+    //---
+
+    uint hier_depth() const;
 
     //---
 
@@ -420,6 +441,7 @@ class CJson {
     //---
 
     std::string to_string() const override;
+    std::string to_name  () const override;
 
     //---
 
@@ -493,6 +515,7 @@ class CJson {
     //---
 
     std::string to_string() const override;
+    std::string to_name  () const override;
 
     //---
 

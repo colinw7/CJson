@@ -1148,6 +1148,13 @@ to_string() const
 
 std::string
 CJson::Object::
+to_name() const
+{
+  return "{}";
+}
+
+std::string
+CJson::Object::
 hierTypeName() const
 {
   std::string typeName;
@@ -1328,6 +1335,13 @@ to_string() const
   return str;
 }
 
+std::string
+CJson::Array::
+to_name() const
+{
+  return "[]";
+}
+
 void
 CJson::Array::
 printReal(std::ostream &os) const
@@ -1412,4 +1426,26 @@ print(std::ostream &os) const
   }
 
   os << json_->printPostfix(/*isArray*/true);
+}
+
+//---
+
+std::string
+CJson::Value::
+hier_name() const
+{
+  if (parent())
+    return parent()->hier_name() + "/" + to_name();
+  else
+    return to_name();
+}
+
+uint
+CJson::Value::
+hier_depth() const
+{
+  if (parent())
+    return parent()->hier_depth() + 1;
+  else
+    return 0;
 }
