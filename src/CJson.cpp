@@ -16,11 +16,13 @@ namespace {
 CJson::
 CJson()
 {
+  factory_ = new Factory(this);
 }
 
 CJson::
 ~CJson()
 {
+  delete factory_;
 }
 
 //------
@@ -382,6 +384,8 @@ readValue(CStrParse &parse, ValueP &value)
   else
     return errorMsg(parse, "Invalid char for value");
 
+  addValue(value);
+
   return true;
 }
 
@@ -483,6 +487,15 @@ loadString(const std::string &lines, ValueP &value)
   return true;
 }
 
+void
+CJson::
+addValue(ValueP &value)
+{
+  value->setInd(nextInd());
+
+  valueMap_[value->ind()] = value;
+}
+
 //------
 
 bool
@@ -498,17 +511,17 @@ matchObject(const ValueP &value, const std::string &match, ValueP &value1)
     return false;
   }
 
-  Object *obj = value->cast<Object>();
+  auto *obj = value->cast<Object>();
 
   if (match == "?" || match == "?keys") {
     std::vector<std::string> names;
 
     obj->getNames(names);
 
-    Array *array = createArray();
+    auto *array = createArray();
 
     for (const auto &n : names) {
-      String *str = createString(n);
+      auto *str = createString(n);
 
       array->addValue(ValueP(str));
     }
@@ -516,7 +529,7 @@ matchObject(const ValueP &value, const std::string &match, ValueP &value1)
     value1 = ValueP(array);
   }
   else if (match == "?type") {
-    String *str = createString(obj->typeName());
+    auto *str = createString(obj->typeName());
 
     value1 = ValueP(str);
   }
@@ -525,7 +538,7 @@ matchObject(const ValueP &value, const std::string &match, ValueP &value1)
 
     obj->getValues(values);
 
-    Array *array = createArray();
+    auto *array = createArray();
 
     for (const auto &v : values)
       array->addValue(v);
@@ -556,7 +569,7 @@ matchArray(const ValueP &value, const std::string &lhs, const std::string &rhs, 
     return false;
   }
 
-  Array *array = value->cast<Array>();
+  auto *array = value->cast<Array>();
 
   if (lhs[0] != '[' || lhs[lhs.size() - 1] != ']')
     return false;
@@ -668,7 +681,7 @@ matchList(const ValueP &value, int ind, const std::string &lhs, const std::strin
 
   fields.push_back(names);
 
-  Array *array = createArray();
+  auto *array = createArray();
 
   for (const auto &f : fields) {
     Values values1;
@@ -828,7 +841,7 @@ matchHier1(const ValueP &value, int /*ind*/, const std::string &lhs, const std::
     return false;
   }
 
-  Object *obj = value->cast<Object>();
+  auto *obj = value->cast<Object>();
 
   // name
   ValueP lvalue;
@@ -846,7 +859,7 @@ matchHier1(const ValueP &value, int /*ind*/, const std::string &lhs, const std::
       return false;
     }
 
-    Array *array = rvalue->cast<Array>();
+    auto *array = rvalue->cast<Array>();
 
     int i = 0;
 
@@ -868,7 +881,7 @@ matchHier1(const ValueP &value, int /*ind*/, const std::string &lhs, const std::
         kvalues.push_back(kvalue);
     }
 
-    String *str = hierValuesToKey(ivalues, kvalues);
+    auto *str = hierValuesToKey(ivalues, kvalues);
 
     values.push_back(ValueP(str));
   }
@@ -923,63 +936,61 @@ CJson::String *
 CJson::
 createString(const std::string &str)
 {
-  auto *jstr = new String(this, str);
-
-  return jstr;
+  return factory_->createString(str);
 }
 
 CJson::Number *
 CJson::
 createNumber(double r)
 {
-  auto *jnumber = new Number(this, r);
-
-  return jnumber;
+  return factory_->createNumber(r);
 }
 
 CJson::True *
 CJson::
 createTrue()
 {
-  auto *jtrue = new True(this);
-
-  return jtrue;
+  return factory_->createTrue();
 }
 
 CJson::False *
 CJson::
 createFalse()
 {
-  auto *jfalse = new False(this);
-
-  return jfalse;
+  return factory_->createFalse();
 }
 
 CJson::Null *
 CJson::
 createNull()
 {
-  auto *jnull = new Null(this);
-
-  return jnull;
+  return factory_->createNull();
 }
 
 CJson::Object *
 CJson::
 createObject()
 {
-  auto *jobj = new Object(this);
-
-  return jobj;
+  return factory_->createObject();
 }
 
 CJson::Array *
 CJson::
 createArray()
 {
-  auto *jarray = new Array(this);
+  return factory_->createArray();
+}
 
-  return jarray;
+//---
+
+CJson::ValueP
+CJson::
+indToValue(uint ind) const
+{
+  auto p = valueMap_.find(ind);
+  if (p == valueMap_.end()) return ValueP();
+
+  return (*p).second;
 }
 
 //---
@@ -1027,6 +1038,71 @@ printPostfix(bool isArray) const
   if (isPrintFlat()) return "";
 
   return (isArray ? "]" : "}");
+}
+
+//------
+
+CJson::String *
+CJson::Factory::
+createString(const std::string &str)
+{
+  auto *jstr = new String(json_, str);
+
+  return jstr;
+}
+
+CJson::Number *
+CJson::Factory::
+createNumber(double r)
+{
+  auto *jnumber = new Number(json_, r);
+
+  return jnumber;
+}
+
+CJson::True *
+CJson::Factory::
+createTrue()
+{
+  auto *jtrue = new True(json_);
+
+  return jtrue;
+}
+
+CJson::False *
+CJson::Factory::
+createFalse()
+{
+  auto *jfalse = new False(json_);
+
+  return jfalse;
+}
+
+CJson::Null *
+CJson::Factory::
+createNull()
+{
+  auto *jnull = new Null(json_);
+
+  return jnull;
+}
+
+CJson::Object *
+CJson::Factory::
+createObject()
+{
+  auto *jobj = new Object(json_);
+
+  return jobj;
+}
+
+CJson::Array *
+CJson::Factory::
+createArray()
+{
+  auto *jarray = new Array(json_);
+
+  return jarray;
 }
 
 //------

@@ -72,7 +72,7 @@ main(int argc, char **argv)
 
   CJson::ValueP value;
 
-  if (! json->loadFile(filename.c_str(), value)) {
+  if (! json->loadFile(filename, value)) {
     std::cerr << "Parse failed\n";
     exit(1);
   }

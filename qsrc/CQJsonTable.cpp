@@ -13,6 +13,8 @@ CQJsonTable(QWidget *parent) :
   header_ = new CQHeaderView(this);
 
   setHorizontalHeader(header_);
+
+  header_->setStretchLastSection(true);
 }
 
 void

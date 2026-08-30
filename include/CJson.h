@@ -63,6 +63,9 @@ class CJson {
     Value *parent() const { return parent_; }
     void setParent(Value *p) { parent_ = p; }
 
+    const uint &ind() const { return ind_; }
+    void setInd(const uint &v) { ind_ = v; }
+
     //---
 
     ValueType type() const { return type_; }
@@ -79,15 +82,11 @@ class CJson {
 
     //---
 
-    bool isBool() const { return isTrue() || isFalse(); }
-
-    bool toBool() const {
-      if (isTrue ()) return true;
-      if (isFalse()) return false;
-      assert(false); return false;
+    std::string toString() const {
+      assert(isString());
+      auto *str = cast<CJson::String>();
+      return str->value();
     }
-
-    //---
 
     double toNumber() const {
       assert(isNumber());
@@ -95,19 +94,15 @@ class CJson {
       return num->value();
     }
 
-    std::string toString() const {
-      assert(isString());
-      auto *str = cast<CJson::String>();
-      return str->value();
-    }
-
     //---
 
-    virtual uint numValues() const { return 1; }
+    bool isBool() const { return isTrue() || isFalse(); }
 
-    virtual std::string indexKey(uint i) { assert(i == 0); return ""; }
-
-    virtual ValueP indexValue(uint i) { assert(i == 0); return ValueP(); }
+    bool toBool() const {
+      if (isTrue ()) return true;
+      if (isFalse()) return false;
+      assert(false); return false;
+    }
 
     //---
 
@@ -163,9 +158,25 @@ class CJson {
     CJson*    json_   { nullptr };
     Value*    parent_ { nullptr };
     ValueType type_   { ValueType::VALUE_NONE };
+    uint      ind_    { 0 };
   };
 
   using Values = std::vector<ValueP>;
+
+  //---
+
+  class Composite : public Value {
+   public:
+    Composite(CJson *json, ValueType type) :
+     Value(json, type) {
+    }
+
+    virtual uint numValues() const = 0;
+
+    virtual std::string indexKey(uint i) = 0;
+
+    virtual ValueP indexValue(uint i) = 0;
+  };
 
   //---
 
@@ -312,7 +323,7 @@ class CJson {
   //---
 
   // Json Object (name/value map)
-  class Object : public Value {
+  class Object : public Composite {
    public:
     using NameValueMap   = std::map<std::string, ValueP>;
     using NameValue      = std::pair<std::string, ValueP>;
@@ -321,7 +332,7 @@ class CJson {
 
    public:
     Object(CJson *json) :
-     Value(json, ValueType::VALUE_OBJECT) {
+     Composite(json, ValueType::VALUE_OBJECT) {
     }
 
    ~Object() { }
@@ -467,10 +478,10 @@ class CJson {
   //---
 
   // Json Array
-  class Array : public Value {
+  class Array : public Composite {
    public:
     Array(CJson *json) :
-     Value(json, ValueType::VALUE_ARRAY) {
+     Composite(json, ValueType::VALUE_ARRAY) {
     }
 
    ~Array() { }
@@ -525,6 +536,28 @@ class CJson {
 
    private:
     Values values_;
+  };
+
+  //---
+
+  class Factory {
+   public:
+    Factory(CJson *json) :
+     json_(json) {
+    }
+
+    virtual ~Factory() { }
+
+    virtual String *createString(const std::string &str);
+    virtual Number* createNumber(double r);
+    virtual True*   createTrue();
+    virtual False*  createFalse();
+    virtual Null*   createNull();
+    virtual Object* createObject();
+    virtual Array*  createArray();
+
+   protected:
+    CJson* json_ { nullptr };
   };
 
   //------
@@ -664,6 +697,10 @@ class CJson {
 
   //---
 
+  ValueP indToValue(uint ind) const;
+
+  //---
+
  private:
   template<typename Tag, typename T>
   struct TypeMap {
@@ -774,6 +811,11 @@ class CJson {
   std::string printPostfix(bool isArray=false) const;
 
  private:
+  void addValue(ValueP &value);
+
+  uint nextInd() { return ++nextInd_; }
+
+ private:
   struct PrintData {
     bool isFlat  { false };
     bool isCsv   { false };
@@ -781,12 +823,20 @@ class CJson {
     bool isShort { false };
   };
 
+  using ValueMap = std::map<uint, ValueP>;
+
   bool      strict_           { false };
   bool      allowSingleQuote_ { false};
   bool      debug_            { false };
   bool      quiet_            { false };
   PrintData printData_        { false };
   bool      stringToReal_     { false };
+
+  Factory *factory_ { nullptr };
+
+  uint nextInd_ { 0 };
+
+  ValueMap valueMap_;
 };
 
 #endif
